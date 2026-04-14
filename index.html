@@ -216,6 +216,56 @@
       text-align: center;
       font-size: 0.92rem;
     }
+
+    /* ── Weather ── */
+    .board-container { position: relative; }
+    .weather-badge {
+      position: absolute;
+      top: -6px;
+      right: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(28,25,20,0.94);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 14px;
+      padding: 8px 16px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+    .weather-badge .w-icon { font-size: 1.7rem; line-height: 1; }
+    .weather-badge .w-name { font-weight: 700; font-size: 0.95rem; color: var(--highlight); }
+    .weather-badge .w-timer { font-size: 0.72rem; color: #9a9080; margin-top: 2px; }
+    .weather-badge .w-desc  { font-size: 0.72rem; color: #b7ae9f; margin-top: 1px; max-width: 160px; }
+
+    .weather-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 300;
+    }
+    .weather-announce {
+      background: rgba(12,10,8,0.93);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 22px;
+      padding: 22px 52px;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #f5f1e8;
+      text-align: center;
+      opacity: 0;
+      transform: scale(0.78) translateY(12px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      text-shadow: 0 2px 12px rgba(0,0,0,.6);
+      letter-spacing: 0.02em;
+    }
+    .weather-announce.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -239,8 +289,23 @@
       </div>
     </div>
 
-    <div id="board" class="board"></div>
-    <div class="footer">Jednoduchá česká středověká strategie pro dva hráče na jednom počítači.</div>
+    <div class="board-container">
+      <div class="weather-badge" id="weatherBadge">
+        <div class="w-icon" id="wIcon">☀️</div>
+        <div>
+          <div class="w-name" id="wName">Jasno</div>
+          <div class="w-desc" id="wDesc">Žádné efekty.</div>
+          <div class="w-timer" id="wTimer">Za 5 tahů se změní</div>
+        </div>
+      </div>
+      <div id="board" class="board"></div>
+    </div>
+
+    <div class="weather-overlay" id="weatherOverlay">
+      <div class="weather-announce" id="weatherAnnounce"></div>
+    </div>
+
+    <div class="footer">Středověká tahová strategie — počasí, mlha, hrady a AI protivník.</div>
   </main>
 
   <script>
@@ -265,6 +330,24 @@
       { type: 'Kněz',      move: 2, attack: 0, range: 1, hp: 5,  symbol: '✝' }
     ];
 
+    // ── Weather constants ────────────────────────────────────────────────────
+    const WEATHER_TYPES = [
+      { id: 'jasno',    name: 'Jasno',    icon: '☀️',  desc: 'Žádné efekty.' },
+      { id: 'dest',     name: 'Déšť',     icon: '🌧️', desc: 'Pohyb −1, Katapult nemůže útočit.' },
+      { id: 'mlha',     name: 'Mlha',     icon: '🌫️', desc: 'Dosah střelců →1, viditelnost −1.' },
+      { id: 'boure',    name: 'Bouře',    icon: '⛈️',  desc: 'Pohyb −1, dosah −1, kopec: −1 HP.' },
+      { id: 'slunecno', name: 'Sluníčko', icon: '🌞', desc: 'Pohyb +1, morálka +1 HP.' },
+    ];
+    const WEATHER_ANNOUNCES = {
+      jasno:    '☀️ Obloha se vyčasuje!',
+      dest:     '🌧️ Přichází déšť!',
+      mlha:     '🌫️ Houstne mlha…',
+      boure:    '⛈️ Přichází bouře!',
+      slunecno: '🌞 Vychází sluníčko!',
+    };
+    const WEATHER_CHANGE_INTERVAL = 5; // po tolika tazích hráče 1
+    // ────────────────────────────────────────────────────────────────────────
+
     const boardElement = document.getElementById('board');
     const turnText = document.getElementById('turnText');
     const message = document.getElementById('message');
@@ -282,6 +365,10 @@
     let validHeals = [];
     let aiEnabled = true;
     let aiThinking = false;
+
+    // Weather
+    let currentWeather = WEATHER_TYPES[0];
+    let weatherTurnCounter = 0; // counts player-1 turns
 
     // Fog of War
     let explored = { 1: new Set(), 2: new Set() };   // hexes ever seen
@@ -304,6 +391,9 @@
       explored = { 1: new Set(), 2: new Set() };
       lastKnownEnemies = { 1: new Map(), 2: new Map() };
       currentVisible = new Set();
+      currentWeather = WEATHER_TYPES[0];
+      weatherTurnCounter = 0;
+      updateWeatherUI();
       boardElement.innerHTML = '';
 
       for (let y = 0; y < 9; y++) {
@@ -506,6 +596,20 @@
           unit.attacked = false;
         }
       });
+
+      // Weather turn counter advances when player 1 starts their turn
+      if (currentPlayer === 1) {
+        weatherTurnCounter++;
+        if (weatherTurnCounter >= WEATHER_CHANGE_INTERVAL) {
+          changeWeather();
+        } else {
+          updateWeatherUI();
+        }
+      }
+
+      // Apply start-of-turn weather effects (lightning, sunshine)
+      applyWeatherStartOfTurn(currentPlayer);
+
       updateStatus();
       renderBoard();
       if (checkGameOver()) return;
@@ -599,13 +703,14 @@
     }
 
     function calculateMoveTargets(unit) {
+      const effectiveMove = Math.max(1, unit.move + weatherMoveBonus());
       const visited = new Set();
       const targets = [];
       const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
       while (queue.length) {
         const current = queue.shift();
         const key = `${current.x},${current.y}`;
-        if (visited.has(key) || current.cost > unit.move) continue;
+        if (visited.has(key) || current.cost > effectiveMove) continue;
         visited.add(key);
         if (!(current.x === unit.x && current.y === unit.y) && !getHex(current.x, current.y).unit) {
           targets.push({ x: current.x, y: current.y });
@@ -614,7 +719,7 @@
           const nextKey = `${nb.x},${nb.y}`;
           if (visited.has(nextKey)) return;
           if (getHex(nb.x, nb.y).unit && !(nb.x === unit.x && nb.y === unit.y)) return;
-          if (current.cost + 1 <= unit.move) queue.push({ x: nb.x, y: nb.y, cost: current.cost + 1 });
+          if (current.cost + 1 <= effectiveMove) queue.push({ x: nb.x, y: nb.y, cost: current.cost + 1 });
         });
       }
       return targets;
@@ -622,11 +727,13 @@
 
     function calculateAttackTargets(unit) {
       if (unit.attack === 0) return [];
+      if (currentWeather.id === 'dest' && unit.type === 'Katapult') return [];
+      const effectiveRange = weatherEffectiveRange(unit);
       const targets = [];
       units.forEach(enemy => {
         if (enemy.player === unit.player) return;
         const dist = hexDistance(unit, enemy);
-        if (dist <= unit.range) targets.push({ x: enemy.x, y: enemy.y });
+        if (dist <= effectiveRange) targets.push({ x: enemy.x, y: enemy.y });
       });
       return targets;
     }
@@ -657,6 +764,68 @@
       return { x: x_cube, y: y_cube, z: z_cube };
     }
 
+    // ── Weather helpers ──────────────────────────────────────────────────────
+
+    function weatherMoveBonus() {
+      if (currentWeather.id === 'dest' || currentWeather.id === 'boure') return -1;
+      if (currentWeather.id === 'slunecno') return 1;
+      return 0;
+    }
+
+    function weatherEffectiveRange(unit) {
+      if (currentWeather.id === 'mlha' && (unit.type === 'Lučištník' || unit.type === 'Katapult'))
+        return 1;
+      if (currentWeather.id === 'boure') return Math.max(1, unit.range - 1);
+      return unit.range;
+    }
+
+    function weatherSightBonus() {
+      return currentWeather.id === 'mlha' ? -1 : 0;
+    }
+
+    function applyWeatherStartOfTurn(player) {
+      if (currentWeather.id === 'boure') {
+        const victims = units.filter(u => u.player === player && getTerrainAt(u.x, u.y) === 'Kopec');
+        let killed = [];
+        victims.forEach(u => {
+          u.hp = Math.max(0, u.hp - 1);
+          if (u.hp === 0) killed.push(u);
+        });
+        killed.forEach(u => removeUnit(u));
+        if (victims.length) setMessage(`⚡ Bouře! ${victims.length} jednotka(y) na kopci zasažena bleskem!`);
+      }
+      if (currentWeather.id === 'slunecno') {
+        const healed = units.filter(u => u.player === player && u.hp < u.maxHp);
+        healed.forEach(u => { u.hp = Math.min(u.maxHp, u.hp + 1); });
+        if (healed.length) setMessage(`☀️ Sluníčko! Morálka posílena — ${healed.map(u=>u.type).join(', ')} +1 HP.`);
+      }
+    }
+
+    function changeWeather() {
+      const options = WEATHER_TYPES.filter(w => w.id !== currentWeather.id);
+      currentWeather = options[Math.floor(Math.random() * options.length)];
+      weatherTurnCounter = 0;
+      showWeatherAnnounce(WEATHER_ANNOUNCES[currentWeather.id]);
+      updateWeatherUI();
+    }
+
+    function showWeatherAnnounce(text) {
+      const el = document.getElementById('weatherAnnounce');
+      el.textContent = text;
+      el.classList.add('show');
+      clearTimeout(showWeatherAnnounce._timer);
+      showWeatherAnnounce._timer = setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    function updateWeatherUI() {
+      document.getElementById('wIcon').textContent  = currentWeather.icon;
+      document.getElementById('wName').textContent  = currentWeather.name;
+      document.getElementById('wDesc').textContent  = currentWeather.desc;
+      const remaining = WEATHER_CHANGE_INTERVAL - weatherTurnCounter;
+      const suffix = remaining === 1 ? 'tah' : remaining < 5 ? 'tahy' : 'tahů';
+      document.getElementById('wTimer').textContent = `Za ${remaining} ${suffix} se změní`;
+    }
+
     // ── Fog of War helpers ──────────────────────────────────────────────────
 
     function hexesInRange(cx, cy, range) {
@@ -665,9 +834,11 @@
 
     function computeVisible(player) {
       const vis = new Set();
+      const unitSight = Math.max(1, 2 + weatherSightBonus());
       units.filter(u => u.player === player).forEach(u => {
-        hexesInRange(u.x, u.y, 2).forEach(h => vis.add(`${h.x},${h.y}`));
+        hexesInRange(u.x, u.y, unitSight).forEach(h => vis.add(`${h.x},${h.y}`));
       });
+      // Castles always have sight 1 (unaffected by weather)
       castles.filter(c => c.owner === player).forEach(c => {
         hexesInRange(c.x, c.y, 1).forEach(h => vis.add(`${h.x},${h.y}`));
       });
