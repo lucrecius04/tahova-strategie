@@ -177,6 +177,7 @@
     }
 
     .unit {
+      position: relative;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -187,6 +188,21 @@
       text-shadow: 0 1px 2px rgba(0,0,0,.45);
       border: 2px solid rgba(255,255,255,0.15);
       box-shadow: inset 0 0 0 2px rgba(0,0,0,.16), 0 12px 26px rgba(0,0,0,.25);
+    }
+    .unit-stars {
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.52rem;
+      line-height: 1;
+      white-space: nowrap;
+      filter: drop-shadow(0 0 3px rgba(0,0,0,.9));
+      pointer-events: none;
+    }
+    .unit.rank-legend {
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.16), 0 12px 26px rgba(0,0,0,.25),
+                  0 0 0 3px rgba(255,215,0,0.55), 0 0 14px rgba(255,180,0,0.35);
     }
     .unit.player1 { background: linear-gradient(135deg, #8b6f48, #d9be83); color: #1b1210; }
     .unit.player2 { background: linear-gradient(135deg, #3a5f87, #739cc6); color: #f9f6ef; }
@@ -346,6 +362,18 @@
       slunecno: '🌞 Vychází sluníčko!',
     };
     const WEATHER_CHANGE_INTERVAL = 5; // po tolika tazích hráče 1
+
+    // ── Veteran system constants ─────────────────────────────────────────────
+    const RANK_KILLS    = [0, 2, 4, 6];
+    const RANK_NAMES    = ['Rekrut', 'Veterán', 'Elita', 'Legenda'];
+    const RANK_ICONS    = ['', '⭐', '⭐⭐', '⭐⭐⭐'];
+    const NICKNAMES = {
+      'Rytíř':     ['Rytíř smrti', 'Rudý rytíř', 'Železný rytíř', 'Temný rytíř'],
+      'Lučištník': ['Stínový lučištník', 'Orlí oko', 'Nemilosrdný lučištník', 'Tichý lovec'],
+      'Kopinář':   ['Železný kopinář', 'Krvavá kopí', 'Neústupný kopinář', 'Strážce bran'],
+      'Katapult':  ['Ničitel hradeb', 'Hromobití', 'Bouřlivý katapult', 'Hlas zkázy'],
+      'Kněz':      ['Svatý léčitel', 'Věčný kněz', 'Kněz duší', 'Stínolamač'],
+    };
     // ────────────────────────────────────────────────────────────────────────
 
     const boardElement = document.getElementById('board');
@@ -443,7 +471,10 @@
             maxHp: base.hp,
             symbol: base.symbol,
             moved: false,
-            attacked: false
+            attacked: false,
+            kills: 0,
+            rank: 0,
+            nickname: null,
           };
           units.push(unit);
           getHex(pos.x, pos.y).unit = unit;
@@ -541,9 +572,12 @@
       setMessage(`${attacker.type} útočí na ${defender.type}: ${damage} poškození.${info}`);
 
       if (defender.hp <= 0) {
+        attacker.kills += 1;
+        checkPromotion(attacker);
         setTimeout(() => {
           removeUnit(defender);
-          setMessage(`${attacker.type} poráží ${defender.type}!`);
+          const defName = defender.nickname || defender.type;
+          setMessage(`${attacker.nickname || attacker.type} poráží ${defName}!`);
           renderBoard();
         }, 300);
       }
@@ -555,6 +589,30 @@
       healer.attacked = true;
       setMessage(`Kněz léčí ${target.type} o 3 HP (${target.hp}/${target.maxHp}).`);
       endTurn();
+    }
+
+    function checkPromotion(unit) {
+      for (let r = 3; r >= 1; r--) {
+        if (unit.kills >= RANK_KILLS[r] && unit.rank < r) {
+          promoteUnit(unit, r);
+          return;
+        }
+      }
+    }
+
+    function promoteUnit(unit, newRank) {
+      unit.rank = newRank;
+      unit.attack += 1;
+      if (newRank === 2) {
+        unit.maxHp += 1;
+        unit.hp = Math.min(unit.hp + 1, unit.maxHp);
+      }
+      if (newRank === 3) {
+        const pool = NICKNAMES[unit.type] || ['Legendární bojovník'];
+        unit.nickname = pool[Math.floor(Math.random() * pool.length)];
+      }
+      const displayName = unit.nickname || unit.type;
+      showAnnounce(`${displayName} povýšen na ${RANK_NAMES[newRank]}! ${RANK_ICONS[newRank]}`, 3200);
     }
 
     function moveUnit(unit, x, y) {
@@ -638,12 +696,16 @@
         }
       }
 
-      // Priority 2: Attack — prefer weakest enemy
+      // Priority 2: Attack — prefer weakest, avoid Legends if possible
       for (const unit of aiUnits) {
         const attacks = calculateAttackTargets(unit);
         if (attacks.length > 0) {
           const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
-          targets.sort((a, b) => a.hp - b.hp);
+          targets.sort((a, b) => {
+            const aLeg = a.rank === 3, bLeg = b.rank === 3;
+            if (aLeg !== bLeg) return aLeg ? 1 : -1; // avoid Legends
+            return a.hp - b.hp; // prefer weakest
+          });
           performAttack(unit, targets[0]);
           return;
         }
@@ -805,16 +867,16 @@
       const options = WEATHER_TYPES.filter(w => w.id !== currentWeather.id);
       currentWeather = options[Math.floor(Math.random() * options.length)];
       weatherTurnCounter = 0;
-      showWeatherAnnounce(WEATHER_ANNOUNCES[currentWeather.id]);
+      showAnnounce(WEATHER_ANNOUNCES[currentWeather.id]);
       updateWeatherUI();
     }
 
-    function showWeatherAnnounce(text) {
+    function showAnnounce(text, duration = 2800) {
       const el = document.getElementById('weatherAnnounce');
       el.textContent = text;
       el.classList.add('show');
-      clearTimeout(showWeatherAnnounce._timer);
-      showWeatherAnnounce._timer = setTimeout(() => el.classList.remove('show'), 2800);
+      clearTimeout(showAnnounce._timer);
+      showAnnounce._timer = setTimeout(() => el.classList.remove('show'), duration);
     }
 
     function updateWeatherUI() {
@@ -856,7 +918,8 @@
         if (enemy) {
           lastKnownEnemies[player].set(key, {
             symbol: enemy.symbol, player: enemy.player,
-            hp: enemy.hp, maxHp: enemy.maxHp, type: enemy.type
+            hp: enemy.hp, maxHp: enemy.maxHp, type: enemy.type,
+            rank: enemy.rank, nickname: enemy.nickname,
           });
         } else {
           lastKnownEnemies[player].delete(key);
@@ -884,8 +947,17 @@
 
     function makeUnitEl(unit, ghost = false) {
       const el = document.createElement('div');
-      el.className = `unit player${unit.player}${ghost ? ' ghost' : ''}`;
+      let cls = `unit player${unit.player}`;
+      if (ghost) cls += ' ghost';
+      if (!ghost && unit.rank === 3) cls += ' rank-legend';
+      el.className = cls;
       el.textContent = unit.symbol;
+      if (unit.rank > 0) {
+        const stars = document.createElement('div');
+        stars.className = 'unit-stars';
+        stars.textContent = RANK_ICONS[unit.rank];
+        el.appendChild(stars);
+      }
       const hp = document.createElement('span');
       hp.textContent = unit.hp;
       el.appendChild(hp);
@@ -950,10 +1022,18 @@
       unitStatus.innerHTML =
         `<div style="margin-bottom:8px;font-size:0.8rem;color:#b7ae9f">${castleInfo}</div>` +
         units.map(unit => {
-          const bar = '█'.repeat(Math.round(unit.hp / unit.maxHp * 8)) + '░'.repeat(8 - Math.round(unit.hp / unit.maxHp * 8));
-          return `<div style="margin-bottom:5px;">
-            <strong style="color:${unit.player===1?'#d9be83':'#739cc6'}">${unit.symbol} ${unit.type}</strong>
-            <div style="font-size:0.78rem;font-family:monospace">${bar} ${unit.hp}/${unit.maxHp}</div>
+          const filled = Math.round(unit.hp / unit.maxHp * 8);
+          const bar = '█'.repeat(filled) + '░'.repeat(8 - filled);
+          const rankBadge = unit.rank > 0
+            ? `<span style="font-size:0.7rem">${RANK_ICONS[unit.rank]} ${RANK_NAMES[unit.rank]}</span> `
+            : '';
+          const displayName = unit.nickname
+            ? `<span title="${unit.type}">${unit.nickname}</span>`
+            : unit.type;
+          const killsStr = `<span style="color:#9a9080;font-size:0.7rem"> (${unit.kills} kills)</span>`;
+          return `<div style="margin-bottom:6px;">
+            <strong style="color:${unit.player===1?'#d9be83':'#739cc6'}">${unit.symbol} ${displayName}</strong>${killsStr}<br>
+            ${rankBadge}<span style="font-family:monospace;font-size:0.78rem">${bar} ${unit.hp}/${unit.maxHp}</span>
           </div>`;
         }).join('');
       if (!units.some(u => u.player === currentPlayer)) checkGameOver();
