@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Tahová středověká strategie</title>
+  <style>
+    :root {
+      --bg: #1b1915;
+      --card: #2e2a24;
+      --text: #f5f1e8;
+      --grid-gap: 6px;
+      --alt: #3f372f;
+      --highlight: #bfa34a;
+      --red: #c65a47;
+      --green: #7bb26b;
+      --blue: #4a7ab2;
+      --shadow: rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #4d523c 0%, #1b1915 55%);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); }
+    p { margin: 8px 0 0; color: #d7c9ae; }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 18px 0 24px;
+    }
+    .panel {
+      background: rgba(30, 28, 24, 0.92);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 14px 35px var(--shadow);
+    }
+    .panel strong { display: block; margin-bottom: 8px; color: var(--highlight); }
+    .panel button {
+      margin-top: 12px;
+      width: 100%;
+      border: none;
+      background: var(--highlight);
+      color: #1b1915;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .panel button:hover { filter: brightness(1.05); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      justify-items: center;
+      gap: var(--grid-gap);
+      padding-bottom: 20px;
+    }
+    .row-offset { margin-left: calc(40px + var(--grid-gap) / 2); }
+    .hex {
+      position: relative;
+      width: 80px;
+      height: 92px;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .hex:hover { transform: translateY(-4px); }
+    .hex::before,
+    .hex::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      border-left: 40px solid transparent;
+      border-right: 40px solid transparent;
+    }
+    .hex::before {
+      bottom: 100%;
+      border-bottom: 20px solid;
+      border-bottom-color: inherit;
+    }
+    .hex::after {
+      top: 100%;
+      border-top: 20px solid;
+      border-top-color: inherit;
+    }
+    .tile {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      border: 2px solid rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 8px;
+      color: var(--text);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+    .tile::before {
+      content: attr(data-terrain);
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-size: 0.7rem;
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .tile[data-terrain="Pole"] { background-color: #3f422d; }
+    .tile[data-terrain="Les"] { background-color: #34432f; }
+    .tile[data-terrain="Kopec"] { background-color: #4f4232; }
+    .tile[data-terrain="Hrad"] { background-color: #4b4553; }
+    .tile.highlight { border-color: #f5dd7a; box-shadow: 0 0 0 4px rgba(191,163,74,0.55); }
+    .tile.move-target {
+      border-color: #7bb26b;
+      box-shadow: 0 0 0 4px rgba(122, 178, 107, 0.5);
+      background-color: rgba(122, 178, 107, 0.22) !important;
+    }
+    .tile.attack-target {
+      border-color: #c65a47;
+      box-shadow: 0 0 0 4px rgba(198, 90, 71, 0.5);
+      background-color: rgba(198, 90, 71, 0.2) !important;
+    }
+    @keyframes attack-flash {
+      0%   { background-color: rgba(198, 90, 71, 0); }
+      20%  { background-color: rgba(198, 90, 71, 0.85); box-shadow: 0 0 0 6px rgba(198,90,71,0.6); }
+      100% { background-color: rgba(198, 90, 71, 0); box-shadow: none; }
+    }
+    .tile.flash-hit {
+      animation: attack-flash 0.5s ease-out forwards;
+    }
+
+    .unit {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.95rem;
+      font-weight: 800;
+      text-shadow: 0 1px 2px rgba(0,0,0,.45);
+      border: 2px solid rgba(255,255,255,0.15);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.16), 0 12px 26px rgba(0,0,0,.25);
+    }
+    .unit.player1 { background: linear-gradient(135deg, #8b6f48, #d9be83); color: #1b1210; }
+    .unit.player2 { background: linear-gradient(135deg, #3a5f87, #739cc6); color: #f9f6ef; }
+    .unit span {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      background: rgba(20,20,20,0.9);
+      color: #fff;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+    }
+    .tooltip {
+      font-size: 0.9rem;
+      padding: 10px 12px;
+      background: rgba(22,20,18,0.95);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 13px;
+    }
+    .footer {
+      margin-top: 16px;
+      color: #b7ae9f;
+      text-align: center;
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Středověká tahová strategie</h1>
+      <p>9×9 hex mapa, dva hráči, rytíř, lučištník a kopinář. Vyhraj ten, kdo zůstane poslední.</p>
+    </header>
+
+    <div class="status">
+      <div class="panel">
+        <strong>Aktuální tah</strong>
+        <div id="turnText">Hráč 1 (žlutý)</div>
+        <div class="tooltip" id="message">Vyber svou jednotku a poté cíl.</div>
+      </div>
+      <div class="panel">
+        <strong>Jednotky</strong>
+        <div id="unitStatus"></div>
+        <button id="aiToggle">AI: Zapnuto</button>
+        <button id="restartButton">Restartovat hru</button>
+      </div>
+    </div>
+
+    <div id="board" class="board"></div>
+    <div class="footer">Jednoduchá česká středověká strategie pro dva hráče na jednom počítači.</div>
+  </main>
+
+  <script>
+    const terrainTypes = ["Pole", "Les", "Kopec", "Hrad"];
+    const mapTemplate = [
+      [0,0,1,1,0,0,2,0,0],
+      [0,1,0,2,0,1,0,1,0],
+      [1,0,0,0,2,0,0,0,1],
+      [0,2,0,0,1,0,0,2,0],
+      [0,0,2,1,0,1,2,0,0],
+      [1,0,0,0,2,0,0,0,1],
+      [0,1,0,2,0,1,0,1,0],
+      [0,0,1,1,0,0,2,0,0],
+      [1,0,0,0,1,0,0,0,1]
+    ];
+
+    const baseUnits = [
+      { type: 'Rytíř', move: 3, attack: 3, range: 1, hp: 10, symbol: '⚔' },
+      { type: 'Lučištník', move: 2, attack: 2, range: 2, hp: 6, symbol: '🏹' },
+      { type: 'Kopinář', move: 2, attack: 2, range: 1, hp: 8, symbol: '🛡' }
+    ];
+
+    const boardElement = document.getElementById('board');
+    const turnText = document.getElementById('turnText');
+    const message = document.getElementById('message');
+    const unitStatus = document.getElementById('unitStatus');
+    const restartButton = document.getElementById('restartButton');
+    const aiToggleBtn = document.getElementById('aiToggle');
+
+    let hexes = [];
+    let units = [];
+    let currentPlayer = 1;
+    let selectedUnit = null;
+    let validMoves = [];
+    let validAttacks = [];
+    let aiEnabled = true;
+    let aiThinking = false;
+
+    function createGame() {
+      hexes = [];
+      units = [];
+      currentPlayer = 1;
+      selectedUnit = null;
+      validMoves = [];
+      validAttacks = [];
+      boardElement.innerHTML = '';
+
+      for (let y = 0; y < 9; y++) {
+        const rowOffset = document.createElement('div');
+        rowOffset.className = y % 2 === 1 ? 'row-offset' : '';
+        rowOffset.style.display = 'contents';
+        for (let x = 0; x < 9; x++) {
+          const hex = document.createElement('div');
+          hex.className = 'hex';
+          hex.dataset.x = x;
+          hex.dataset.y = y;
+
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.dataset.terrain = terrainTypes[mapTemplate[y][x]];
+          tile.style.backgroundColor = '';
+          hex.appendChild(tile);
+          boardElement.appendChild(hex);
+          hexes.push({ x, y, el: hex, tile, unit: null });
+
+          hex.addEventListener('click', () => selectHex(x, y));
+        }
+      }
+      placeUnits();
+      updateStatus();
+      renderBoard();
+    }
+
+    function placeUnits() {
+      const initialPositions = [
+        [{x:0,y:0},{x:2,y:0},{x:0,y:2}],
+        [{x:8,y:8},{x:6,y:8},{x:8,y:6}]
+      ];
+      for (let player = 1; player <= 2; player++) {
+        initialPositions[player - 1].forEach((pos, index) => {
+          const base = baseUnits[index];
+          const unit = {
+            id: `${player}-${index}`,
+            player,
+            x: pos.x,
+            y: pos.y,
+            type: base.type,
+            move: base.move,
+            attack: base.attack,
+            range: base.range,
+            hp: base.hp,
+            maxHp: base.hp,
+            symbol: base.symbol,
+            moved: false,
+            attacked: false
+          };
+          units.push(unit);
+          getHex(pos.x, pos.y).unit = unit;
+        });
+      }
+    }
+
+    function getHex(x, y) {
+      return hexes.find(cell => cell.x === x && cell.y === y);
+    }
+
+    function selectHex(x, y) {
+      if (aiThinking) return;
+      if (checkGameOver()) return;
+      const hex = getHex(x, y);
+      const unit = hex.unit;
+
+      if (selectedUnit && unit && unit.player !== currentPlayer && canAttack(selectedUnit, unit)) {
+        performAttack(selectedUnit, unit);
+        return;
+      }
+
+      if (unit && unit.player === currentPlayer) {
+        selectUnit(unit);
+        return;
+      }
+
+      if (selectedUnit && canMoveTo(selectedUnit, x, y)) {
+        moveUnit(selectedUnit, x, y);
+        return;
+      }
+
+      setMessage('Vyber svou jednotku nebo cílové políčko pro přesun.');
+    }
+
+    function selectUnit(unit) {
+      selectedUnit = unit;
+      validMoves = calculateMoveTargets(unit);
+      validAttacks = calculateAttackTargets(unit);
+      setMessage(`Vybrán ${unit.type}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.`);
+      renderBoard();
+    }
+
+    function canMoveTo(unit, x, y) {
+      return validMoves.some(pos => pos.x === x && pos.y === y);
+    }
+
+    function canAttack(attacker, target) {
+      return validAttacks.some(pos => pos.x === target.x && pos.y === target.y) && target.player !== attacker.player;
+    }
+
+    function flashTile(x, y) {
+      const hex = getHex(x, y);
+      if (!hex) return;
+      hex.tile.classList.remove('flash-hit');
+      void hex.tile.offsetWidth; // force reflow to restart animation
+      hex.tile.classList.add('flash-hit');
+      hex.tile.addEventListener('animationend', () => hex.tile.classList.remove('flash-hit'), { once: true });
+    }
+
+    function performAttack(attacker, defender) {
+      const damage = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
+      flashTile(defender.x, defender.y);
+      defender.hp = Math.max(0, defender.hp - damage);
+      attacker.attacked = true;
+      setMessage(`${attacker.type} útočí na ${defender.type} a způsobuje ${damage} poškození.`);
+      if (defender.hp <= 0) {
+        setTimeout(() => {
+          removeUnit(defender);
+          setMessage(`${attacker.type} poráží ${defender.type}!`);
+          renderBoard();
+        }, 300);
+      }
+      endTurn();
+    }
+
+    function moveUnit(unit, x, y) {
+      const start = getHex(unit.x, unit.y);
+      const dest = getHex(x, y);
+      if (dest.unit) return;
+      start.unit = null;
+      dest.unit = unit;
+      unit.x = x;
+      unit.y = y;
+      unit.moved = true;
+      setMessage(`${unit.type} se přemístil.`);
+      endTurn();
+    }
+
+    function removeUnit(unit) {
+      const hex = getHex(unit.x, unit.y);
+      if (hex) hex.unit = null;
+      units = units.filter(item => item.id !== unit.id);
+      if (selectedUnit?.id === unit.id) selectedUnit = null;
+    }
+
+    function endTurn() {
+      validMoves = [];
+      validAttacks = [];
+      selectedUnit = null;
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      units.forEach(unit => {
+        if (unit.player === currentPlayer) {
+          unit.moved = false;
+          unit.attacked = false;
+        }
+      });
+      updateStatus();
+      renderBoard();
+      if (checkGameOver()) return;
+      if (currentPlayer === 2 && aiEnabled) {
+        aiThinking = true;
+        setMessage('AI přemýšlí…');
+        setTimeout(aiTurn, 750);
+      }
+    }
+
+    function aiTurn() {
+      aiThinking = false;
+      if (checkGameOver()) return;
+
+      const aiUnits = units.filter(u => u.player === 2);
+
+      // Priority 1: attack if any unit has an enemy in range
+      for (const unit of aiUnits) {
+        const attacks = calculateAttackTargets(unit);
+        if (attacks.length > 0) {
+          const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
+          targets.sort((a, b) => a.hp - b.hp); // prefer weakest enemy
+          const target = targets[0];
+          performAttack(unit, target);
+          return;
+        }
+      }
+
+      // Priority 2: move unit closest to nearest enemy toward it
+      const enemies = units.filter(u => u.player === 1);
+      if (enemies.length === 0) return;
+
+      let bestUnit = null, bestMove = null, bestDist = Infinity;
+      for (const unit of aiUnits) {
+        const moves = calculateMoveTargets(unit);
+        if (moves.length === 0) continue;
+        const nearestEnemy = enemies.reduce((best, e) =>
+          hexDistance(unit, e) < hexDistance(unit, best) ? e : best, enemies[0]);
+        for (const mv of moves) {
+          const d = hexDistance(mv, nearestEnemy);
+          if (d < bestDist) { bestDist = d; bestMove = mv; bestUnit = unit; }
+        }
+      }
+
+      if (bestUnit && bestMove) {
+        moveUnit(bestUnit, bestMove.x, bestMove.y);
+        return;
+      }
+
+      // Nothing to do — pass
+      endTurn();
+    }
+
+    function checkGameOver() {
+      const p1 = units.filter(u => u.player === 1).length;
+      const p2 = units.filter(u => u.player === 2).length;
+      if (p1 === 0 || p2 === 0) {
+        const winner = p1 > 0 ? 'Hráč 1' : 'Hráč 2';
+        turnText.textContent = `${winner} vyhrává!`;
+        setMessage(`Konec hry. ${winner} zůstává poslední.`);
+        return true;
+      }
+      return false;
+    }
+
+    function calculateMoveTargets(unit) {
+      const visited = new Set();
+      const targets = [];
+      const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
+      while (queue.length) {
+        const current = queue.shift();
+        const key = `${current.x},${current.y}`;
+        if (visited.has(key) || current.cost > unit.move) continue;
+        visited.add(key);
+        if (!(current.x === unit.x && current.y === unit.y) && !getHex(current.x, current.y).unit) {
+          targets.push({ x: current.x, y: current.y });
+        }
+        neighbors(current.x, current.y).forEach(nb => {
+          const nextKey = `${nb.x},${nb.y}`;
+          if (visited.has(nextKey)) return;
+          if (getHex(nb.x, nb.y).unit && !(nb.x === unit.x && nb.y === unit.y)) return;
+          if (current.cost + 1 <= unit.move) queue.push({ x: nb.x, y: nb.y, cost: current.cost + 1 });
+        });
+      }
+      return targets;
+    }
+
+    function calculateAttackTargets(unit) {
+      const targets = [];
+      units.forEach(enemy => {
+        if (enemy.player === unit.player) return;
+        const dist = hexDistance(unit, enemy);
+        if (dist <= unit.range) targets.push({ x: enemy.x, y: enemy.y });
+      });
+      return targets;
+    }
+
+    function hexDistance(a, b) {
+      const ac = offsetToCube(a.x, a.y);
+      const bc = offsetToCube(b.x, b.y);
+      return (Math.abs(ac.x - bc.x) + Math.abs(ac.y - bc.y) + Math.abs(ac.z - bc.z)) / 2;
+    }
+
+    function offsetToCube(x, y) {
+      const col = x;
+      const row = y;
+      const x_cube = col - (row - (row & 1)) / 2;
+      const z_cube = row;
+      const y_cube = -x_cube - z_cube;
+      return { x: x_cube, y: y_cube, z: z_cube };
+    }
+
+    function neighbors(x, y) {
+      const offsets = (y % 2 === 0)
+        ? [{dx: -1,dy:0},{dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},{dx:0,dy:1}]
+        : [{dx:-1,dy:0},{dx:-1,dy:-1},{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:1}];
+      return offsets
+        .map(o => ({ x: x + o.dx, y: y + o.dy }))
+        .filter(p => p.x >= 0 && p.x < 9 && p.y >= 0 && p.y < 9);
+    }
+
+    function renderBoard() {
+      boardElement.querySelectorAll('.hex').forEach(hexEl => {
+        const x = parseInt(hexEl.dataset.x, 10);
+        const y = parseInt(hexEl.dataset.y, 10);
+        const hex = getHex(x, y);
+        const tile = hex.tile;
+        tile.classList.remove('highlight', 'move-target', 'attack-target');
+        hexEl.querySelector('.unit')?.remove();
+
+        if (selectedUnit && selectedUnit.x === x && selectedUnit.y === y) {
+          tile.classList.add('highlight');
+        }
+        if (validMoves.some(pos => pos.x === x && pos.y === y)) {
+          tile.classList.add('move-target');
+        }
+        if (validAttacks.some(pos => pos.x === x && pos.y === y)) {
+          tile.classList.add('attack-target');
+        }
+
+        if (hex.unit) {
+          const unitEl = document.createElement('div');
+          unitEl.className = `unit player${hex.unit.player}`;
+          unitEl.textContent = hex.unit.symbol;
+          const hp = document.createElement('span');
+          hp.textContent = hex.unit.hp;
+          unitEl.appendChild(hp);
+          tile.appendChild(unitEl);
+        }
+      });
+      updateStatus();
+    }
+
+    function updateStatus() {
+      turnText.textContent = `Hráč ${currentPlayer} ${currentPlayer === 1 ? '(žlutý)' : '(modrý)'}`;
+      unitStatus.innerHTML = units.map(unit => {
+        return `<div style="margin-bottom:8px;">
+          <strong>${unit.player === 1 ? 'Hráč 1' : 'Hráč 2'}: ${unit.type}</strong>
+          <div>HP ${unit.hp}/${unit.maxHp} • Pohyb ${unit.move} • Útok ${unit.attack} • Dosah ${unit.range}</div>
+        </div>`;
+      }).join('');
+      if (!units.some(u => u.player === currentPlayer)) {
+        checkGameOver();
+      }
+    }
+
+    function setMessage(text) {
+      message.textContent = text;
+    }
+
+    aiToggleBtn.addEventListener('click', () => {
+      aiEnabled = !aiEnabled;
+      aiToggleBtn.textContent = `AI: ${aiEnabled ? 'Zapnuto' : 'Vypnuto'}`;
+    });
+
+    restartButton.addEventListener('click', createGame);
+    createGame();
+  </script>
+</body>
+</html>
