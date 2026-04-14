@@ -138,6 +138,35 @@
       box-shadow: 0 0 0 4px rgba(198, 90, 71, 0.5);
       background-color: rgba(198, 90, 71, 0.2) !important;
     }
+    .tile.heal-target {
+      border-color: #5ba8c9;
+      box-shadow: 0 0 0 4px rgba(91, 168, 201, 0.55);
+      background-color: rgba(91, 168, 201, 0.2) !important;
+    }
+    .castle-marker {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      font-size: 1rem;
+      line-height: 1;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
+      pointer-events: none;
+    }
+    .castle-marker.owner-1 { text-shadow: 0 0 8px #d9be83; }
+    .castle-marker.owner-2 { text-shadow: 0 0 8px #739cc6; }
+
+    /* ── Fog of War ── */
+    .hex.fog-hidden  { pointer-events: none; }
+    .hex.fog-hidden .tile  { filter: brightness(0.07); }
+    .hex.fog-explored { pointer-events: none; }
+    .hex.fog-explored .tile {
+      filter: grayscale(1) brightness(0.42);
+      transition: filter 0.3s;
+    }
+    .unit.ghost {
+      opacity: 0.3;
+      filter: grayscale(1);
+    }
     @keyframes attack-flash {
       0%   { background-color: rgba(198, 90, 71, 0); }
       20%  { background-color: rgba(198, 90, 71, 0.85); box-shadow: 0 0 0 6px rgba(198,90,71,0.6); }
@@ -219,19 +248,21 @@
     const mapTemplate = [
       [0,0,1,1,0,0,2,0,0],
       [0,1,0,2,0,1,0,1,0],
-      [1,0,0,0,2,0,0,0,1],
+      [1,0,3,0,2,0,0,0,1],
       [0,2,0,0,1,0,0,2,0],
       [0,0,2,1,0,1,2,0,0],
       [1,0,0,0,2,0,0,0,1],
-      [0,1,0,2,0,1,0,1,0],
+      [0,1,0,2,0,1,3,1,0],
       [0,0,1,1,0,0,2,0,0],
       [1,0,0,0,1,0,0,0,1]
     ];
 
     const baseUnits = [
-      { type: 'Rytíř', move: 3, attack: 3, range: 1, hp: 10, symbol: '⚔' },
-      { type: 'Lučištník', move: 2, attack: 2, range: 2, hp: 6, symbol: '🏹' },
-      { type: 'Kopinář', move: 2, attack: 2, range: 1, hp: 8, symbol: '🛡' }
+      { type: 'Rytíř',     move: 3, attack: 3, range: 1, hp: 10, symbol: '⚔' },
+      { type: 'Lučištník', move: 2, attack: 2, range: 2, hp: 6,  symbol: '🏹' },
+      { type: 'Kopinář',   move: 2, attack: 2, range: 1, hp: 8,  symbol: '🛡' },
+      { type: 'Katapult',  move: 1, attack: 4, range: 3, hp: 6,  symbol: '💣' },
+      { type: 'Kněz',      move: 2, attack: 0, range: 1, hp: 5,  symbol: '✝' }
     ];
 
     const boardElement = document.getElementById('board');
@@ -243,20 +274,36 @@
 
     let hexes = [];
     let units = [];
+    let castles = [];
     let currentPlayer = 1;
     let selectedUnit = null;
     let validMoves = [];
     let validAttacks = [];
+    let validHeals = [];
     let aiEnabled = true;
     let aiThinking = false;
+
+    // Fog of War
+    let explored = { 1: new Set(), 2: new Set() };   // hexes ever seen
+    let lastKnownEnemies = { 1: new Map(), 2: new Map() }; // key -> unit snapshot
+    let currentVisible = new Set(); // recomputed each render
 
     function createGame() {
       hexes = [];
       units = [];
+      castles = [
+        { x: 2, y: 2, owner: 1 },
+        { x: 6, y: 6, owner: 2 }
+      ];
       currentPlayer = 1;
       selectedUnit = null;
       validMoves = [];
       validAttacks = [];
+      validHeals = [];
+      aiThinking = false;
+      explored = { 1: new Set(), 2: new Set() };
+      lastKnownEnemies = { 1: new Map(), 2: new Map() };
+      currentVisible = new Set();
       boardElement.innerHTML = '';
 
       for (let y = 0; y < 9; y++) {
@@ -287,8 +334,8 @@
 
     function placeUnits() {
       const initialPositions = [
-        [{x:0,y:0},{x:2,y:0},{x:0,y:2}],
-        [{x:8,y:8},{x:6,y:8},{x:8,y:6}]
+        [{x:0,y:0},{x:2,y:0},{x:0,y:2},{x:3,y:1},{x:1,y:3}],
+        [{x:8,y:8},{x:6,y:8},{x:8,y:6},{x:5,y:7},{x:7,y:5}]
       ];
       for (let player = 1; player <= 2; player++) {
         initialPositions[player - 1].forEach((pos, index) => {
@@ -318,11 +365,27 @@
       return hexes.find(cell => cell.x === x && cell.y === y);
     }
 
+    function getTerrainAt(x, y) {
+      return terrainTypes[mapTemplate[y][x]];
+    }
+
+    function getCastleAt(x, y) {
+      return castles.find(c => c.x === x && c.y === y) || null;
+    }
+
     function selectHex(x, y) {
       if (aiThinking) return;
       if (checkGameOver()) return;
       const hex = getHex(x, y);
       const unit = hex.unit;
+
+      // Priest healing
+      if (selectedUnit && selectedUnit.type === 'Kněz' && unit && unit.player === currentPlayer && unit.id !== selectedUnit.id) {
+        if (validHeals.some(h => h.x === x && h.y === y)) {
+          healUnit(selectedUnit, unit);
+          return;
+        }
+      }
 
       if (selectedUnit && unit && unit.player !== currentPlayer && canAttack(selectedUnit, unit)) {
         performAttack(selectedUnit, unit);
@@ -346,7 +409,9 @@
       selectedUnit = unit;
       validMoves = calculateMoveTargets(unit);
       validAttacks = calculateAttackTargets(unit);
-      setMessage(`Vybrán ${unit.type}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.`);
+      validHeals = calculateHealTargets(unit);
+      const extra = unit.type === 'Kněz' ? ' Může léčit spojence (klikni na ně).' : '';
+      setMessage(`Vybrán ${unit.type}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.${extra}`);
       renderBoard();
     }
 
@@ -368,11 +433,23 @@
     }
 
     function performAttack(attacker, defender) {
-      const damage = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
+      const baseAtk = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
+      const atkBonus = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
+      const defBonus = getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0;
+      const castleBonus = getCastleAt(defender.x, defender.y) ? 2 : 0;
+      const damage = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus);
+
       flashTile(defender.x, defender.y);
       defender.hp = Math.max(0, defender.hp - damage);
       attacker.attacked = true;
-      setMessage(`${attacker.type} útočí na ${defender.type} a způsobuje ${damage} poškození.`);
+
+      const bonusInfo = [];
+      if (atkBonus)    bonusInfo.push('+1 útok (kopec)');
+      if (defBonus)    bonusInfo.push('-1 pošk. (les)');
+      if (castleBonus) bonusInfo.push('-2 pošk. (hrad)');
+      const info = bonusInfo.length ? ` [${bonusInfo.join(', ')}]` : '';
+      setMessage(`${attacker.type} útočí na ${defender.type}: ${damage} poškození.${info}`);
+
       if (defender.hp <= 0) {
         setTimeout(() => {
           removeUnit(defender);
@@ -380,6 +457,13 @@
           renderBoard();
         }, 300);
       }
+      endTurn();
+    }
+
+    function healUnit(healer, target) {
+      target.hp = Math.min(target.maxHp, target.hp + 3);
+      healer.attacked = true;
+      setMessage(`Kněz léčí ${target.type} o 3 HP (${target.hp}/${target.maxHp}).`);
       endTurn();
     }
 
@@ -392,7 +476,14 @@
       unit.x = x;
       unit.y = y;
       unit.moved = true;
-      setMessage(`${unit.type} se přemístil.`);
+
+      const castle = getCastleAt(x, y);
+      if (castle && castle.owner !== unit.player) {
+        castle.owner = unit.player;
+        setMessage(`${unit.type} dobývá hrad! Patří nyní Hráči ${unit.player}.`);
+      } else {
+        setMessage(`${unit.type} se přemístil.`);
+      }
       endTurn();
     }
 
@@ -406,6 +497,7 @@
     function endTurn() {
       validMoves = [];
       validAttacks = [];
+      validHeals = [];
       selectedUnit = null;
       currentPlayer = currentPlayer === 1 ? 2 : 1;
       units.forEach(unit => {
@@ -430,24 +522,51 @@
 
       const aiUnits = units.filter(u => u.player === 2);
 
-      // Priority 1: attack if any unit has an enemy in range
+      // Priority 1: Priest heals most damaged ally
       for (const unit of aiUnits) {
-        const attacks = calculateAttackTargets(unit);
-        if (attacks.length > 0) {
-          const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
-          targets.sort((a, b) => a.hp - b.hp); // prefer weakest enemy
-          const target = targets[0];
-          performAttack(unit, target);
+        if (unit.type !== 'Kněz') continue;
+        const heals = calculateHealTargets(unit);
+        if (heals.length > 0) {
+          const targets = units.filter(u => heals.some(h => h.x === u.x && h.y === u.y));
+          targets.sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+          healUnit(unit, targets[0]);
           return;
         }
       }
 
-      // Priority 2: move unit closest to nearest enemy toward it
+      // Priority 2: Attack — prefer weakest enemy
+      for (const unit of aiUnits) {
+        const attacks = calculateAttackTargets(unit);
+        if (attacks.length > 0) {
+          const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
+          targets.sort((a, b) => a.hp - b.hp);
+          performAttack(unit, targets[0]);
+          return;
+        }
+      }
+
+      // Priority 3: Capture enemy castle
+      const enemyCastles = castles.filter(c => c.owner !== 2);
+      if (enemyCastles.length > 0) {
+        for (const unit of aiUnits) {
+          if (unit.type === 'Kněz') continue;
+          const moves = calculateMoveTargets(unit);
+          const target = enemyCastles.reduce((best, c) =>
+            hexDistance(unit, c) < hexDistance(unit, best) ? c : best, enemyCastles[0]);
+          if (moves.some(m => m.x === target.x && m.y === target.y)) {
+            moveUnit(unit, target.x, target.y);
+            return;
+          }
+        }
+      }
+
+      // Priority 4: Move toward nearest enemy (Katapult stays back, Kněz stays back)
       const enemies = units.filter(u => u.player === 1);
       if (enemies.length === 0) return;
 
       let bestUnit = null, bestMove = null, bestDist = Infinity;
       for (const unit of aiUnits) {
+        if (unit.type === 'Katapult' || unit.type === 'Kněz') continue;
         const moves = calculateMoveTargets(unit);
         if (moves.length === 0) continue;
         const nearestEnemy = enemies.reduce((best, e) =>
@@ -457,26 +576,26 @@
           if (d < bestDist) { bestDist = d; bestMove = mv; bestUnit = unit; }
         }
       }
+      if (bestUnit && bestMove) { moveUnit(bestUnit, bestMove.x, bestMove.y); return; }
 
-      if (bestUnit && bestMove) {
-        moveUnit(bestUnit, bestMove.x, bestMove.y);
-        return;
-      }
-
-      // Nothing to do — pass
       endTurn();
     }
 
     function checkGameOver() {
       const p1 = units.filter(u => u.player === 1).length;
       const p2 = units.filter(u => u.player === 2).length;
-      if (p1 === 0 || p2 === 0) {
-        const winner = p1 > 0 ? 'Hráč 1' : 'Hráč 2';
-        turnText.textContent = `${winner} vyhrává!`;
-        setMessage(`Konec hry. ${winner} zůstává poslední.`);
-        return true;
-      }
+      if (p1 === 0) { declareWinner('Hráč 2 (modrý)'); return true; }
+      if (p2 === 0) { declareWinner('Hráč 1 (žlutý)'); return true; }
+      const p1Castles = castles.filter(c => c.owner === 1).length;
+      const p2Castles = castles.filter(c => c.owner === 2).length;
+      if (p1Castles === castles.length) { declareWinner('Hráč 1 (žlutý) — ovládá oba hrady'); return true; }
+      if (p2Castles === castles.length) { declareWinner('Hráč 2 (modrý) — ovládá oba hrady'); return true; }
       return false;
+    }
+
+    function declareWinner(winner) {
+      turnText.textContent = `${winner} vyhrává!`;
+      setMessage(`Konec hry. Vítěz: ${winner}.`);
     }
 
     function calculateMoveTargets(unit) {
@@ -502,11 +621,23 @@
     }
 
     function calculateAttackTargets(unit) {
+      if (unit.attack === 0) return [];
       const targets = [];
       units.forEach(enemy => {
         if (enemy.player === unit.player) return;
         const dist = hexDistance(unit, enemy);
         if (dist <= unit.range) targets.push({ x: enemy.x, y: enemy.y });
+      });
+      return targets;
+    }
+
+    function calculateHealTargets(unit) {
+      if (unit.type !== 'Kněz') return [];
+      const targets = [];
+      units.forEach(ally => {
+        if (ally.player !== unit.player || ally.id === unit.id) return;
+        const dist = hexDistance(unit, ally);
+        if (dist <= unit.range && ally.hp < ally.maxHp) targets.push({ x: ally.x, y: ally.y });
       });
       return targets;
     }
@@ -526,6 +657,44 @@
       return { x: x_cube, y: y_cube, z: z_cube };
     }
 
+    // ── Fog of War helpers ──────────────────────────────────────────────────
+
+    function hexesInRange(cx, cy, range) {
+      return hexes.filter(h => hexDistance({ x: cx, y: cy }, h) <= range);
+    }
+
+    function computeVisible(player) {
+      const vis = new Set();
+      units.filter(u => u.player === player).forEach(u => {
+        hexesInRange(u.x, u.y, 2).forEach(h => vis.add(`${h.x},${h.y}`));
+      });
+      castles.filter(c => c.owner === player).forEach(c => {
+        hexesInRange(c.x, c.y, 1).forEach(h => vis.add(`${h.x},${h.y}`));
+      });
+      return vis;
+    }
+
+    function updateFog(player) {
+      currentVisible = computeVisible(player);
+      // Expand explored set and snapshot enemy positions for "last known state"
+      currentVisible.forEach(key => {
+        explored[player].add(key);
+        const [x, y] = key.split(',').map(Number);
+        const hex = getHex(x, y);
+        const enemy = hex.unit && hex.unit.player !== player ? hex.unit : null;
+        if (enemy) {
+          lastKnownEnemies[player].set(key, {
+            symbol: enemy.symbol, player: enemy.player,
+            hp: enemy.hp, maxHp: enemy.maxHp, type: enemy.type
+          });
+        } else {
+          lastKnownEnemies[player].delete(key);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+
     function neighbors(x, y) {
       const offsets = (y % 2 === 0)
         ? [{dx: -1,dy:0},{dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},{dx:0,dy:1}]
@@ -535,49 +704,88 @@
         .filter(p => p.x >= 0 && p.x < 9 && p.y >= 0 && p.y < 9);
     }
 
+    function makeCastleMarker(castle) {
+      const marker = document.createElement('div');
+      marker.className = `castle-marker owner-${castle.owner}`;
+      marker.textContent = '🏰';
+      return marker;
+    }
+
+    function makeUnitEl(unit, ghost = false) {
+      const el = document.createElement('div');
+      el.className = `unit player${unit.player}${ghost ? ' ghost' : ''}`;
+      el.textContent = unit.symbol;
+      const hp = document.createElement('span');
+      hp.textContent = unit.hp;
+      el.appendChild(hp);
+      return el;
+    }
+
     function renderBoard() {
+      // Fog: always render from player 1's perspective when AI handles player 2
+      const fogPlayer = aiEnabled ? 1 : currentPlayer;
+      updateFog(fogPlayer);
+
       boardElement.querySelectorAll('.hex').forEach(hexEl => {
         const x = parseInt(hexEl.dataset.x, 10);
         const y = parseInt(hexEl.dataset.y, 10);
+        const key = `${x},${y}`;
         const hex = getHex(x, y);
         const tile = hex.tile;
-        tile.classList.remove('highlight', 'move-target', 'attack-target');
-        hexEl.querySelector('.unit')?.remove();
 
-        if (selectedUnit && selectedUnit.x === x && selectedUnit.y === y) {
-          tile.classList.add('highlight');
-        }
-        if (validMoves.some(pos => pos.x === x && pos.y === y)) {
-          tile.classList.add('move-target');
-        }
-        if (validAttacks.some(pos => pos.x === x && pos.y === y)) {
-          tile.classList.add('attack-target');
+        // Clear previous state
+        hexEl.classList.remove('fog-hidden', 'fog-explored');
+        tile.classList.remove('highlight', 'move-target', 'attack-target', 'heal-target');
+        tile.querySelectorAll('.unit, .castle-marker').forEach(el => el.remove());
+
+        const isVisible  = currentVisible.has(key);
+        const isExplored = explored[fogPlayer].has(key);
+
+        // ── Completely dark — never seen ──────────────────────────────────
+        if (!isExplored) {
+          hexEl.classList.add('fog-hidden');
+          return;
         }
 
-        if (hex.unit) {
-          const unitEl = document.createElement('div');
-          unitEl.className = `unit player${hex.unit.player}`;
-          unitEl.textContent = hex.unit.symbol;
-          const hp = document.createElement('span');
-          hp.textContent = hex.unit.hp;
-          unitEl.appendChild(hp);
-          tile.appendChild(unitEl);
+        // ── Explored but not currently visible — greyscale + last known ──
+        if (!isVisible) {
+          hexEl.classList.add('fog-explored');
+          const castle = getCastleAt(x, y);
+          if (castle) tile.appendChild(makeCastleMarker(castle));
+          const ghost = lastKnownEnemies[fogPlayer].get(key);
+          if (ghost) tile.appendChild(makeUnitEl(ghost, true));
+          return;
         }
+
+        // ── Fully visible ─────────────────────────────────────────────────
+        const castle = getCastleAt(x, y);
+        if (castle) tile.appendChild(makeCastleMarker(castle));
+
+        if (selectedUnit && selectedUnit.x === x && selectedUnit.y === y) tile.classList.add('highlight');
+        if (validMoves.some(p => p.x === x && p.y === y))   tile.classList.add('move-target');
+        if (validAttacks.some(p => p.x === x && p.y === y)) tile.classList.add('attack-target');
+        if (validHeals.some(p => p.x === x && p.y === y))   tile.classList.add('heal-target');
+
+        if (hex.unit) tile.appendChild(makeUnitEl(hex.unit));
       });
       updateStatus();
     }
 
     function updateStatus() {
       turnText.textContent = `Hráč ${currentPlayer} ${currentPlayer === 1 ? '(žlutý)' : '(modrý)'}`;
-      unitStatus.innerHTML = units.map(unit => {
-        return `<div style="margin-bottom:8px;">
-          <strong>${unit.player === 1 ? 'Hráč 1' : 'Hráč 2'}: ${unit.type}</strong>
-          <div>HP ${unit.hp}/${unit.maxHp} • Pohyb ${unit.move} • Útok ${unit.attack} • Dosah ${unit.range}</div>
-        </div>`;
-      }).join('');
-      if (!units.some(u => u.player === currentPlayer)) {
-        checkGameOver();
-      }
+      const castleInfo = castles.map(c =>
+        `Hrad: ${c.owner === 1 ? '🟡 H1' : '🔵 H2'}`
+      ).join(' | ');
+      unitStatus.innerHTML =
+        `<div style="margin-bottom:8px;font-size:0.8rem;color:#b7ae9f">${castleInfo}</div>` +
+        units.map(unit => {
+          const bar = '█'.repeat(Math.round(unit.hp / unit.maxHp * 8)) + '░'.repeat(8 - Math.round(unit.hp / unit.maxHp * 8));
+          return `<div style="margin-bottom:5px;">
+            <strong style="color:${unit.player===1?'#d9be83':'#739cc6'}">${unit.symbol} ${unit.type}</strong>
+            <div style="font-size:0.78rem;font-family:monospace">${bar} ${unit.hp}/${unit.maxHp}</div>
+          </div>`;
+        }).join('');
+      if (!units.some(u => u.player === currentPlayer)) checkGameOver();
     }
 
     function setMessage(text) {
