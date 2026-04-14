@@ -233,6 +233,49 @@
       font-size: 0.92rem;
     }
 
+    /* ── Ability bar ── */
+    .ability-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 18px;
+      margin: 10px 0;
+      background: rgba(28,25,20,0.94);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      flex-wrap: wrap;
+    }
+    .ability-bar.hidden { display: none; }
+    .ability-bar .ab-label { font-size: 0.82rem; color: #9a9080; white-space: nowrap; }
+    .ability-bar .ab-hint  { font-size: 0.8rem; color: #b7ae9f; flex: 1; }
+    .ability-btn {
+      border: none;
+      background: linear-gradient(135deg, #c8992a, #f0c040);
+      color: #1b1210;
+      padding: 8px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      transition: filter 0.15s, opacity 0.15s;
+    }
+    .ability-btn:hover:not(:disabled) { filter: brightness(1.12); }
+    .ability-btn:disabled {
+      background: #3a3530;
+      color: #6a6058;
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    .ability-btn.active-mode {
+      background: linear-gradient(135deg, #4a7ab2, #80b8f0);
+      animation: pulse-blue 1s ease-in-out infinite alternate;
+    }
+    @keyframes pulse-blue {
+      from { box-shadow: 0 0 0 2px rgba(74,122,178,0.3); }
+      to   { box-shadow: 0 0 0 6px rgba(74,122,178,0.0); }
+    }
+
     /* ── Weather ── */
     .board-container { position: relative; }
     .weather-badge {
@@ -317,6 +360,12 @@
       <div id="board" class="board"></div>
     </div>
 
+    <div id="abilityBar" class="ability-bar hidden">
+      <span class="ab-label">Schopnost:</span>
+      <button id="abilityBtn" class="ability-btn" disabled></button>
+      <span class="ab-hint" id="abilityHint"></span>
+    </div>
+
     <div class="weather-overlay" id="weatherOverlay">
       <div class="weather-announce" id="weatherAnnounce"></div>
     </div>
@@ -363,6 +412,15 @@
     };
     const WEATHER_CHANGE_INTERVAL = 5; // po tolika tazích hráče 1
 
+    // ── Ability system constants ─────────────────────────────────────────────
+    const ABILITIES = {
+      'Rytíř':     { icon: '⚡',  name: 'Nájezd',           desc: 'Pohyb +2 a okamžitý útok na cíl v dosahu.' },
+      'Lučištník': { icon: '🎯', name: 'Přesná střela',    desc: 'Dvojitý dosah, ignoruje terénní obranu obránce.' },
+      'Kopinář':   { icon: '🛡️', name: 'Štítová zeď',      desc: '-2 poškození tento tah, nelze se pohybovat.' },
+      'Katapult':  { icon: '💥', name: 'Bombardování',     desc: 'AoE útok — vybrané pole + všichni sousedé.' },
+      'Kněz':      { icon: '✝️', name: 'Zmrtvýchvstání',   desc: 'Oživí poslední padlou spojeneckou jednotku s 3 HP. (1× za hru)' },
+    };
+
     // ── Veteran system constants ─────────────────────────────────────────────
     const RANK_KILLS    = [0, 2, 4, 6];
     const RANK_NAMES    = ['Rekrut', 'Veterán', 'Elita', 'Legenda'];
@@ -394,6 +452,11 @@
     let aiEnabled = true;
     let aiThinking = false;
 
+    // Ability state
+    let abilityMode = null;  // null | 'charge-move' | 'charge-attack' | 'bombard'
+    let abilityUnit = null;
+    let lastKilledFriendly = { 1: null, 2: null };
+
     // Weather
     let currentWeather = WEATHER_TYPES[0];
     let weatherTurnCounter = 0; // counts player-1 turns
@@ -419,6 +482,9 @@
       explored = { 1: new Set(), 2: new Set() };
       lastKnownEnemies = { 1: new Map(), 2: new Map() };
       currentVisible = new Set();
+      abilityMode = null;
+      abilityUnit = null;
+      lastKilledFriendly = { 1: null, 2: null };
       currentWeather = WEATHER_TYPES[0];
       weatherTurnCounter = 0;
       updateWeatherUI();
@@ -475,6 +541,10 @@
             kills: 0,
             rank: 0,
             nickname: null,
+            abilityUsed: false,
+            shieldWall: false,
+            precisionShot: false,
+            resurrectionUsed: false,
           };
           units.push(unit);
           getHex(pos.x, pos.y).unit = unit;
@@ -499,6 +569,32 @@
       if (checkGameOver()) return;
       const hex = getHex(x, y);
       const unit = hex.unit;
+
+      // ── Ability modes ───────────────────────────────────────────────────
+      if (abilityMode === 'charge-move') {
+        if (validMoves.some(p => p.x === x && p.y === y) && !hex.unit) chargeMove(abilityUnit, x, y);
+        return;
+      }
+      if (abilityMode === 'charge-attack') {
+        if (unit && unit.player !== currentPlayer && validAttacks.some(p => p.x === x && p.y === y)) {
+          abilityMode = null;
+          performAttack(abilityUnit, unit);
+          abilityUnit = null;
+        }
+        return;
+      }
+      if (abilityMode === 'bombard') {
+        if (validAttacks.some(p => p.x === x && p.y === y)) performBombardment(abilityUnit, x, y);
+        return;
+      }
+
+      // ── Precision shot ──────────────────────────────────────────────────
+      if (selectedUnit?.precisionShot && unit && unit.player !== currentPlayer) {
+        if (validAttacks.some(p => p.x === x && p.y === y)) {
+          performAttack(selectedUnit, unit, true);
+          return;
+        }
+      }
 
       // Priest healing
       if (selectedUnit && selectedUnit.type === 'Kněz' && unit && unit.player === currentPlayer && unit.id !== selectedUnit.id) {
@@ -527,12 +623,16 @@
     }
 
     function selectUnit(unit) {
+      abilityMode = null;
+      abilityUnit = null;
       selectedUnit = unit;
       validMoves = calculateMoveTargets(unit);
       validAttacks = calculateAttackTargets(unit);
       validHeals = calculateHealTargets(unit);
-      const extra = unit.type === 'Kněz' ? ' Může léčit spojence (klikni na ně).' : '';
-      setMessage(`Vybrán ${unit.type}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.${extra}`);
+      const displayName = unit.nickname || unit.type;
+      const extra = unit.type === 'Kněz' ? ' Může léčit spojence.' : '';
+      setMessage(`Vybrán ${displayName}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.${extra}`);
+      updateAbilityBar(unit);
       renderBoard();
     }
 
@@ -553,23 +653,27 @@
       hex.tile.addEventListener('animationend', () => hex.tile.classList.remove('flash-hit'), { once: true });
     }
 
-    function performAttack(attacker, defender) {
+    function performAttack(attacker, defender, ignoreTerrain = false) {
       const baseAtk = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
-      const atkBonus = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
-      const defBonus = getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0;
-      const castleBonus = getCastleAt(defender.x, defender.y) ? 2 : 0;
-      const damage = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus);
+      const atkBonus  = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
+      const defBonus  = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
+      const castleBonus  = ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
+      const shieldBonus  = defender.shieldWall ? 2 : 0;
+      const damage = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus);
 
       flashTile(defender.x, defender.y);
       defender.hp = Math.max(0, defender.hp - damage);
       attacker.attacked = true;
+      if (attacker.precisionShot) attacker.precisionShot = false;
 
       const bonusInfo = [];
       if (atkBonus)    bonusInfo.push('+1 útok (kopec)');
       if (defBonus)    bonusInfo.push('-1 pošk. (les)');
       if (castleBonus) bonusInfo.push('-2 pošk. (hrad)');
+      if (shieldBonus) bonusInfo.push('-2 pošk. (štít)');
+      if (ignoreTerrain) bonusInfo.push('🎯 přesná střela');
       const info = bonusInfo.length ? ` [${bonusInfo.join(', ')}]` : '';
-      setMessage(`${attacker.type} útočí na ${defender.type}: ${damage} poškození.${info}`);
+      setMessage(`${attacker.nickname||attacker.type} útočí na ${defender.nickname||defender.type}: ${damage} pošk.${info}`);
 
       if (defender.hp <= 0) {
         attacker.kills += 1;
@@ -636,10 +740,18 @@
     }
 
     function removeUnit(unit) {
+      // Save snapshot for Priest resurrection (belongs to unit's own player)
+      lastKilledFriendly[unit.player] = {
+        id: unit.id, player: unit.player, type: unit.type,
+        move: unit.move, attack: unit.attack, range: unit.range,
+        maxHp: unit.maxHp, symbol: unit.symbol,
+        kills: unit.kills, rank: unit.rank, nickname: unit.nickname,
+        abilityUsed: false, shieldWall: false, precisionShot: false, resurrectionUsed: false,
+      };
       const hex = getHex(unit.x, unit.y);
       if (hex) hex.unit = null;
       units = units.filter(item => item.id !== unit.id);
-      if (selectedUnit?.id === unit.id) selectedUnit = null;
+      if (selectedUnit?.id === unit.id) { selectedUnit = null; updateAbilityBar(null); }
     }
 
     function endTurn() {
@@ -648,10 +760,16 @@
       validHeals = [];
       selectedUnit = null;
       currentPlayer = currentPlayer === 1 ? 2 : 1;
+      abilityMode = null;
+      abilityUnit = null;
+      updateAbilityBar(null);
       units.forEach(unit => {
         if (unit.player === currentPlayer) {
           unit.moved = false;
           unit.attacked = false;
+          unit.abilityUsed = false;
+          unit.shieldWall = false;
+          unit.precisionShot = false;
         }
       });
 
@@ -683,6 +801,9 @@
       if (checkGameOver()) return;
 
       const aiUnits = units.filter(u => u.player === 2);
+
+      // Priority 0: Special abilities
+      if (aiUseAbilities(aiUnits)) return;
 
       // Priority 1: Priest heals most damaged ally
       for (const unit of aiUnits) {
@@ -764,8 +885,8 @@
       setMessage(`Konec hry. Vítěz: ${winner}.`);
     }
 
-    function calculateMoveTargets(unit) {
-      const effectiveMove = Math.max(1, unit.move + weatherMoveBonus());
+    function calculateMoveTargets(unit, customMove = null) {
+      const effectiveMove = customMove !== null ? customMove : Math.max(1, unit.move + weatherMoveBonus());
       const visited = new Set();
       const targets = [];
       const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
@@ -810,6 +931,239 @@
       });
       return targets;
     }
+
+    // ── Special abilities ────────────────────────────────────────────────────
+
+    function updateAbilityBar(unit) {
+      const bar = document.getElementById('abilityBar');
+      const btn = document.getElementById('abilityBtn');
+      const hint = document.getElementById('abilityHint');
+      if (!unit || !ABILITIES[unit.type] || unit.player !== currentPlayer) {
+        bar.classList.add('hidden'); return;
+      }
+      bar.classList.remove('hidden');
+      const ab = ABILITIES[unit.type];
+      const isRez = unit.type === 'Kněz';
+      const rezDone = isRez && unit.resurrectionUsed;
+      const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
+      const canUse = !unit.abilityUsed && !rezDone && !noDeadAlly;
+      btn.textContent = `${ab.icon} ${ab.name}`;
+      btn.disabled = !canUse;
+      btn.className = `ability-btn${abilityMode ? ' active-mode' : ''}`;
+      hint.textContent = rezDone ? 'Již použito (1× za hru)' : noDeadAlly ? 'Žádná padlá jednotka' : ab.desc;
+      btn.onclick = () => { if (canUse) activateAbility(unit); };
+    }
+
+    function activateAbility(unit) {
+      if (!unit || unit.abilityUsed) return;
+      switch (unit.type) {
+        case 'Rytíř':     activateCharge(unit);           break;
+        case 'Lučištník': activatePrecisionShot(unit);    break;
+        case 'Kopinář':   activateShieldWall(unit);       break;
+        case 'Katapult':  activateBombardMode(unit);      break;
+        case 'Kněz':      activateResurrection(unit);     break;
+      }
+    }
+
+    // Rytíř — Nájezd
+    function activateCharge(unit) {
+      abilityMode = 'charge-move';
+      abilityUnit = unit;
+      unit.abilityUsed = true;
+      const extMove = Math.max(1, unit.move + weatherMoveBonus() + 2);
+      validMoves = calculateMoveTargets(unit, extMove);
+      validAttacks = []; validHeals = [];
+      setMessage('⚡ Nájezd! Vyber cílové pole pohybu (dosah +2).');
+      updateAbilityBar(unit);
+      renderBoard();
+    }
+
+    function chargeMove(unit, x, y) {
+      const start = getHex(unit.x, unit.y);
+      const dest  = getHex(x, y);
+      if (!dest || dest.unit) return;
+      start.unit = null; dest.unit = unit;
+      unit.x = x; unit.y = y; unit.moved = true;
+      const castle = getCastleAt(x, y);
+      if (castle && castle.owner !== unit.player) {
+        castle.owner = unit.player;
+        setMessage(`⚡ Nájezd! ${unit.nickname||unit.type} dobývá hrad!`);
+        abilityMode = null; abilityUnit = null;
+        endTurn(); return;
+      }
+      abilityMode = 'charge-attack';
+      validMoves = [];
+      validAttacks = calculateAttackTargets(unit);
+      if (validAttacks.length === 0) {
+        setMessage('⚡ Nájezd! Žádný nepřítel v dosahu — tah končí.');
+        abilityMode = null; abilityUnit = null;
+        endTurn();
+      } else {
+        setMessage('⚡ Nájezd! Nyní vyber nepřítele k útoku.');
+        renderBoard();
+      }
+    }
+
+    // Lučištník — Přesná střela
+    function activatePrecisionShot(unit) {
+      unit.precisionShot = true;
+      unit.abilityUsed = true;
+      // Double effective range temporarily to compute targets
+      const savedRange = unit.range;
+      unit.range = weatherEffectiveRange(unit) * 2;
+      validAttacks = calculateAttackTargets(unit);
+      unit.range = savedRange;
+      validMoves = []; validHeals = [];
+      setMessage('🎯 Přesná střela! Vyber cíl (dvojitý dosah, ignoruje terén).');
+      updateAbilityBar(unit);
+      renderBoard();
+    }
+
+    // Kopinář — Štítová zeď
+    function activateShieldWall(unit) {
+      unit.shieldWall = true;
+      unit.abilityUsed = true;
+      setMessage('🛡️ Štítová zeď! Jednotka chrání pozici — přijímá -2 poškození.');
+      endTurn();
+    }
+
+    // Katapult — Bombardování (výběr pole)
+    function activateBombardMode(unit) {
+      abilityMode = 'bombard';
+      abilityUnit = unit;
+      unit.abilityUsed = true;
+      const range = weatherEffectiveRange(unit);
+      validAttacks = hexesInRange(unit.x, unit.y, range)
+        .filter(h => !(h.x === unit.x && h.y === unit.y))
+        .map(h => ({ x: h.x, y: h.y }));
+      validMoves = []; validHeals = [];
+      setMessage('💥 Bombardování! Vyber střed útoku (AoE — zasáhne i sousedy).');
+      updateAbilityBar(unit);
+      renderBoard();
+    }
+
+    function performBombardment(unit, cx, cy) {
+      abilityMode = null; abilityUnit = null;
+      unit.attacked = true;
+      const aoeHexes = [{ x: cx, y: cy }, ...neighbors(cx, cy)];
+      const toKill = [];
+      let hitCount = 0;
+      aoeHexes.forEach(pos => {
+        flashTile(pos.x, pos.y);
+        const h = getHex(pos.x, pos.y);
+        if (!h?.unit || h.unit.player === unit.player) return;
+        const dmg = Math.max(0, unit.attack - (h.unit.shieldWall ? 2 : 0));
+        h.unit.hp = Math.max(0, h.unit.hp - dmg);
+        hitCount++;
+        if (h.unit.hp <= 0) { unit.kills++; toKill.push(h.unit); }
+      });
+      checkPromotion(unit);
+      toKill.forEach(u => removeUnit(u));
+      setMessage(`💥 Bombardování! Zasaženo ${hitCount} nepřátel.${toKill.length ? ' Zničeny: ' + toKill.map(u=>u.nickname||u.type).join(', ') + '!' : ''}`);
+      endTurn();
+    }
+
+    // Kněz — Zmrtvýchvstání
+    function activateResurrection(priest) {
+      if (priest.resurrectionUsed) return;
+      const dead = lastKilledFriendly[priest.player];
+      if (!dead) { setMessage('Žádná padlá spojenecká jednotka!'); return; }
+      const freeHex = neighbors(priest.x, priest.y)
+        .map(p => getHex(p.x, p.y)).find(h => h && !h.unit);
+      if (!freeHex) { setMessage('Není volné sousední pole pro oživení!'); return; }
+      const revived = {
+        ...dead, id: `${priest.player}-rev-${Date.now()}`,
+        x: freeHex.x, y: freeHex.y, hp: 3,
+        moved: true, attacked: true, abilityUsed: true,
+      };
+      units.push(revived);
+      freeHex.unit = revived;
+      lastKilledFriendly[priest.player] = null;
+      priest.resurrectionUsed = true;
+      priest.abilityUsed = true;
+      const name = dead.nickname || dead.type;
+      showAnnounce(`✝️ ${name} povstává z mrtvých!`, 2800);
+      setMessage(`Kněz oživil ${name} s 3 HP!`);
+      endTurn();
+    }
+
+    // ── AI ability helpers ───────────────────────────────────────────────────
+
+    function calculateAttackTargetsAt(unit, x, y) {
+      const sx = unit.x, sy = unit.y;
+      unit.x = x; unit.y = y;
+      const t = calculateAttackTargets(unit);
+      unit.x = sx; unit.y = sy;
+      return t;
+    }
+
+    function aiUseAbilities(aiUnits) {
+      // Kněz: resurrect when ally dead
+      for (const u of aiUnits) {
+        if (u.type === 'Kněz' && !u.abilityUsed && !u.resurrectionUsed && lastKilledFriendly[2]) {
+          activateResurrection(u); return true;
+        }
+      }
+      // Katapult: bombard if 2+ enemies in AoE range
+      for (const u of aiUnits) {
+        if (u.type !== 'Katapult' || u.abilityUsed) continue;
+        const range = weatherEffectiveRange(u);
+        let best = null, bestCount = 1;
+        hexesInRange(u.x, u.y, range).forEach(h => {
+          if (h.x === u.x && h.y === u.y) return;
+          const aoe = [h, ...neighbors(h.x, h.y).map(p => getHex(p.x, p.y)).filter(Boolean)];
+          const count = aoe.filter(ah => ah.unit && ah.unit.player !== u.player).length;
+          if (count > bestCount) { bestCount = count; best = h; }
+        });
+        if (best) { u.abilityUsed = true; performBombardment(u, best.x, best.y); return true; }
+      }
+      // Rytíř: charge if enemy reachable by charge but not normal move
+      for (const u of aiUnits) {
+        if (u.type !== 'Rytíř' || u.abilityUsed) continue;
+        const normalMoves = calculateMoveTargets(u);
+        const normalAttacks = calculateAttackTargets(u);
+        if (normalAttacks.length > 0) continue; // can already attack normally
+        const extMove = Math.max(1, u.move + weatherMoveBonus() + 2);
+        for (const pos of calculateMoveTargets(u, extMove)) {
+          if (normalMoves.some(m => m.x === pos.x && m.y === pos.y)) continue;
+          const attacks = calculateAttackTargetsAt(u, pos.x, pos.y);
+          if (attacks.length > 0) {
+            u.abilityUsed = true;
+            const enemies = units.filter(eu => attacks.some(a => a.x === eu.x && a.y === eu.y));
+            enemies.sort((a,b) => (a.rank===3?1:-1) - (b.rank===3?1:-1) || a.hp - b.hp);
+            // Execute move+attack directly (AI doesn't use interactive flow)
+            const start = getHex(u.x, u.y), dest = getHex(pos.x, pos.y);
+            if (!dest || dest.unit) continue;
+            start.unit = null; dest.unit = u; u.x = pos.x; u.y = pos.y; u.moved = true;
+            const castle = getCastleAt(pos.x, pos.y);
+            if (castle && castle.owner !== u.player) { castle.owner = u.player; endTurn(); return true; }
+            setMessage(`⚡ AI Nájezd! ${u.nickname||u.type} útočí.`);
+            performAttack(u, enemies[0]); return true;
+          }
+        }
+      }
+      // Lučištník: precision shot when enemy in double range only
+      for (const u of aiUnits) {
+        if (u.type !== 'Lučištník' || u.abilityUsed) continue;
+        if (calculateAttackTargets(u).length > 0) continue;
+        const savedR = u.range; u.range = weatherEffectiveRange(u) * 2;
+        const dblTargets = calculateAttackTargets(u); u.range = savedR;
+        if (dblTargets.length > 0) {
+          const enemies = units.filter(eu => dblTargets.some(a => a.x === eu.x && a.y === eu.y));
+          enemies.sort((a,b) => a.hp - b.hp);
+          u.abilityUsed = true;
+          performAttack(u, enemies[0], true); return true;
+        }
+      }
+      // Kopinář: shield wall when below 40% HP
+      for (const u of aiUnits) {
+        if (u.type !== 'Kopinář' || u.abilityUsed) continue;
+        if (u.hp < u.maxHp * 0.4) { activateShieldWall(u); return true; }
+      }
+      return false;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
 
     function hexDistance(a, b) {
       const ac = offsetToCube(a.x, a.y);
