@@ -523,6 +523,30 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18),
                   0 0 0 3px rgba(255,215,0,0.65), 0 0 18px rgba(255,185,0,0.45);
     }
+    .unit.hero { width: 70px; height: 70px; z-index: 3; }
+    .unit.hero.player1 {
+      box-shadow: 0 0 0 3px #ffd700, 0 0 22px rgba(255,215,0,0.6),
+                  0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.22);
+    }
+    .unit.hero.player2 {
+      box-shadow: 0 0 0 3px #b8c8e8, 0 0 22px rgba(180,200,240,0.6),
+                  0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.22);
+    }
+    .hero-crown {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.82rem;
+      line-height: 1;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.95));
+      pointer-events: none;
+      z-index: 5;
+    }
+    .xp-bar-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+    .xp-bar-bg  { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #a06820, #f0d060); transition: width 0.4s; }
+    .xp-bar-txt { font-size: 0.58rem; color: #c8a858; white-space: nowrap; }
     .unit.player1 { background: linear-gradient(135deg, #7a5e36, #dfc47a); color: #1a0f05; }
     .unit.player2 { background: linear-gradient(135deg, #2e4f78, #6a9fd4); color: #f0f5ff; }
     /* HP number badge */
@@ -641,6 +665,150 @@
       letter-spacing: 0.02em;
     }
     .weather-announce.show { opacity: 1; transform: scale(1) translateY(0); }
+
+    /* ── Spy stealth visual ── */
+    .unit.spy-own {
+      opacity: 0.42;
+      filter: brightness(0.7) saturate(0.5);
+    }
+    .unit.spy-own:hover { opacity: 0.75; }
+    .sabot-badge {
+      position: absolute;
+      top: -8px;
+      right: -6px;
+      font-size: 0.6rem;
+      background: rgba(220,40,40,0.9);
+      color: #fff;
+      border-radius: 6px;
+      padding: 1px 4px;
+      font-weight: 700;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ── Post-game statistics screen ── */
+    .stats-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8,6,4,0.88);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      transition: opacity 0.55s ease;
+    }
+    .stats-screen.visible { opacity: 1; }
+    .stats-screen.hidden  { display: none; }
+    .stats-panel {
+      background: linear-gradient(160deg, #2a2620 0%, #1e1c18 100%);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08);
+      padding: 32px 36px 28px;
+      max-width: 780px;
+      width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(24px) scale(0.97);
+      transition: transform 0.5s cubic-bezier(0.22,0.61,0.36,1);
+    }
+    .stats-screen.visible .stats-panel { transform: translateY(0) scale(1); }
+    .stats-winner-banner {
+      text-align: center;
+      font-family: 'Cinzel Decorative', cursive;
+      font-size: clamp(1.3rem, 4vw, 2.1rem);
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+    }
+    .stats-meta {
+      text-align: center;
+      color: #9a9080;
+      font-size: 0.82rem;
+      margin-bottom: 22px;
+    }
+    .stats-columns { display: flex; gap: 24px; flex-wrap: wrap; }
+    .stats-col { flex: 1; min-width: 200px; }
+    .stats-col-wide { flex: 1.8; }
+    .stats-section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: #9a9080;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+    .stats-mvp-card {
+      background: rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.2);
+      border-radius: 11px;
+      padding: 11px 14px;
+      font-size: 0.84rem;
+    }
+    .stats-mvp-name { font-weight: 700; font-size: 1rem; color: #f0d060; }
+    .stats-survivor-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .stats-hero-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      padding: 5px 0;
+    }
+    .stats-kill-log {
+      max-height: 170px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .stats-kill-row {
+      font-size: 0.74rem;
+      padding: 3px 0;
+      color: #c8b898;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .stats-kill-row .killer { color: #d4a858; font-weight: 600; }
+    .stats-kill-row .victim { color: #c06858; }
+    .stats-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      margin-top: 26px;
+      flex-wrap: wrap;
+    }
+    .stats-btn {
+      padding: 11px 30px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .stats-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
+    .stats-btn-primary {
+      background: linear-gradient(135deg, #7a5e36, #bfa34a);
+      border-color: #bfa34a;
+      font-weight: 700;
+      color: #1a1008;
+    }
+    .stats-btn-primary:hover { background: linear-gradient(135deg, #9a7040, #d4b858); }
+    .hp-bar-sm { display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+    .hp-bar-sm-bg { width: 50px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .hp-bar-sm-fill { height: 100%; border-radius: 3px; }
+    .hp-bar-sm-fill.p1 { background: linear-gradient(90deg, #7a5e36, #dfc47a); }
+    .hp-bar-sm-fill.p2 { background: linear-gradient(90deg, #2e4f78, #6a9fd4); }
   </style>
 </head>
 <body>
@@ -711,6 +879,32 @@
     <div id="ctxAbility" class="ctx-item ctx-ability">✨ Použít schopnost</div>
   </div>
 
+  <!-- ── Post-game statistics screen ── -->
+  <div id="statsScreen" class="stats-screen hidden" aria-modal="true" role="dialog">
+    <div class="stats-panel">
+      <div class="stats-winner-banner" id="statsWinnerBanner"></div>
+      <div class="stats-meta" id="statsMeta"></div>
+      <div class="stats-columns">
+        <div class="stats-col">
+          <div class="stats-section-title">🏆 MVP</div>
+          <div id="statsMvp"></div>
+          <div class="stats-section-title" style="margin-top:18px">♛ Hrdinové</div>
+          <div id="statsHeroes"></div>
+        </div>
+        <div class="stats-col stats-col-wide">
+          <div class="stats-section-title">⚔️ Přeživší jednotky</div>
+          <div id="statsSurvivors"></div>
+          <div class="stats-section-title" style="margin-top:18px">💀 Soupis soubojů</div>
+          <div id="statsKillLog" class="stats-kill-log"></div>
+        </div>
+      </div>
+      <div class="stats-actions">
+        <button id="statsRestart" class="stats-btn stats-btn-primary">⚔️ Hrát znovu</button>
+        <button id="statsClose" class="stats-btn">Zpět na mapu</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Weather announce overlay ── -->
   <div class="weather-overlay" id="weatherOverlay">
     <div class="weather-announce" id="weatherAnnounce"></div>
@@ -749,8 +943,12 @@
       { type: 'Lučištník', move: 2, attack: 2, range: 2, hp: 6,  symbol: '🏹' },
       { type: 'Pěšák',     move: 2, attack: 2, range: 1, hp: 8,  symbol: '🛡' },
       { type: 'Katapult',  move: 1, attack: 4, range: 3, hp: 6,  symbol: '💣' },
-      { type: 'Kněz',      move: 2, attack: 0, range: 1, hp: 5,  symbol: '✝' }
+      { type: 'Kněz',      move: 2, attack: 0, range: 1, hp: 5,  symbol: '✝' },
+      { type: 'Špión',     move: 4, attack: 2, range: 1, hp: 5,  symbol: '🕵' },
     ];
+    const HERO_BASE   = { type: 'Hrdina', move: 3, attack: 4, range: 1, hp: 15, symbol: '♛' };
+    const HERO_XP_L2  = 20;   // XP to reach level 2
+    const HERO_XP_L3  = 50;   // total XP to reach level 3
 
     // ── Weather constants ────────────────────────────────────────────────────
     const WEATHER_TYPES = [
@@ -799,6 +997,16 @@
         <line fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" x1="12" y1="9" x2="12" y2="22"/>
         <line fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" x1="7" y1="14" x2="17" y2="14"/>
       </svg>`,
+      'Hrdina': `<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true">
+        <path fill="currentColor" d="M2 19v2h20v-2H2zm0-2h20L19 8l-5 5L12 4l-2 9L5 8 2 17z"/>
+        <circle fill="currentColor" opacity=".22" cx="12" cy="13" r="5"/>
+      </svg>`,
+      'Špión': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+        <circle fill="currentColor" cx="12" cy="5.5" r="3.5" opacity=".9"/>
+        <path fill="currentColor" d="M6.5 22h11l-1-9.5c-.4-1.5-2-2.5-4.5-2.5s-4.1 1-4.5 2.5L6.5 22z" opacity=".8"/>
+        <path fill="rgba(0,0,0,0.35)" d="M9 10.5c-.3 3.5-.8 7.5-2.5 11.5h11c-1.7-4-2.2-8-2.5-11.5H9z"/>
+        <rect fill="currentColor" x="10.5" y="7.5" width="3" height="1.5" rx=".75" opacity=".6"/>
+      </svg>`,
     };
 
     // ── Ability system ───────────────────────────────────────────────────────
@@ -808,6 +1016,8 @@
       'Pěšák':     { icon: '🛡️', name: 'Štítová zeď',    desc: '-2 poškození tento tah, nelze se pohybovat.' },
       'Katapult':  { icon: '💥', name: 'Bombardování',   desc: 'AoE útok — vybrané pole + všichni sousedé.' },
       'Kněz':      { icon: '✝️', name: 'Zmrtvýchvstání', desc: 'Oživí poslední padlou spojeneckou jednotku s 3 HP. (1× za hru)' },
+      'Hrdina':    { icon: '📣', name: 'Bojový pokřik',   desc: 'Hrdina a spojenci do 2 hexů +1 útok na tento tah. Lze použít 1× za tah.' },
+      'Špión':     { icon: '🏰', name: 'Sabotáž',         desc: 'Pasivní: stůj na nepřátelském hradě 2 tahy za sebou → hrad přejde bez boje. Pohyb odstraní počítadlo.' },
     };
 
     // ── Veteran system ───────────────────────────────────────────────────────
@@ -820,6 +1030,8 @@
       'Pěšák':     ['Železný pěšák', 'Krvavé štíty', 'Neústupný pěšák', 'Strážce bran'],
       'Katapult':  ['Ničitel hradeb', 'Hromobití', 'Bouřlivý katapult', 'Hlas zkázy'],
       'Kněz':      ['Svatý léčitel', 'Věčný kněz', 'Kněz duší', 'Stínolamač'],
+      'Hrdina':    ['Hrdina království', 'Korunní rytíř', 'Zastánce lidu', 'Věčný hrdina'],
+      'Špión':     ['Stínový infiltrátor', 'Tichý dýkař', 'Noční vlk', 'Mistr přestrojení'],
     };
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
@@ -839,6 +1051,7 @@
     const ctxAbility    = document.getElementById('ctxAbility');
 
     // ── Music system ─────────────────────────────────────────────────────────
+    // Tracks always play to natural end; crossfade starts ~2s before end.
     const MUSIC_FADE_MS = 2000;
     const MUSIC_TRACKS = [
       'music/Main.mp3',
@@ -853,14 +1066,11 @@
     let musicTargetVolume = 0.35;
     let musicCurrentMood = 'calm';
     let musicQueue = [];
-    let musicActive = 0;
+    let musicActiveIdx = 0;
+    let musicFading = false;
 
     const musicPlayers = [new Audio(), new Audio()];
-    musicPlayers.forEach(player => {
-      player.preload = 'auto';
-      player.loop = false;
-      player.volume = 0;
-    });
+    musicPlayers.forEach(p => { p.preload = 'auto'; p.loop = false; p.volume = 0; });
 
     function shuffleTracks(list) {
       const arr = [...list];
@@ -873,79 +1083,108 @@
 
     function nextTrack() {
       if (musicQueue.length === 0) musicQueue = shuffleTracks(MUSIC_TRACKS);
-      return musicQueue.shift() || null;
+      return musicQueue.shift() || MUSIC_TRACKS[0];
     }
 
     function setMusicButtonState() {
       musicToggleBtn.textContent = musicEnabled ? '🔊' : '🔇';
     }
 
-    function fadeAudio(player, from, toOrGetter, duration, done) {
+    function fadeAudio(player, from, to, duration, done) {
       const startTime = performance.now();
       function tick(now) {
         const progress = Math.min(1, (now - startTime) / duration);
-        const target = typeof toOrGetter === 'function' ? toOrGetter() : toOrGetter;
-        player.volume = from + (target - from) * progress;
+        const target = typeof to === 'function' ? to() : to;
+        player.volume = Math.max(0, Math.min(1, from + (target - from) * progress));
         if (progress < 1) requestAnimationFrame(tick);
         else if (done) done();
       }
       requestAnimationFrame(tick);
     }
 
-    function playNextWithFade(forceTrack = null) {
-      const track = forceTrack || nextTrack();
-      if (!track) return;
-      const from = musicPlayers[musicActive];
-      const toIdx = musicActive === 0 ? 1 : 0;
-      const to = musicPlayers[toIdx];
+    function attachMusicEndHandlers(playerEl) {
+      if (playerEl._tuHandler) playerEl.removeEventListener('timeupdate', playerEl._tuHandler);
+      if (playerEl._endHandler) playerEl.removeEventListener('ended', playerEl._endHandler);
 
-      to.onended = null;
-      to.src = encodeURI(track);
-      to.currentTime = 0;
-      to.volume = 0;
-      to.play().catch(() => {});
-
-      fadeAudio(from, from.volume, () => 0, MUSIC_FADE_MS, () => from.pause());
-      fadeAudio(to, to.volume, () => (musicEnabled ? musicTargetVolume : 0), MUSIC_FADE_MS);
-      musicActive = toIdx;
-
-      to.onended = () => {
-        if (!musicUnlocked || !musicEnabled) return;
-        playNextWithFade();
+      playerEl._tuHandler = function () {
+        if (!playerEl.duration || isNaN(playerEl.duration) || musicFading) return;
+        const remaining = playerEl.duration - playerEl.currentTime;
+        if (remaining > 0 && remaining <= MUSIC_FADE_MS / 1000 + 0.15) {
+          playerEl.removeEventListener('timeupdate', playerEl._tuHandler);
+          startCrossfade();
+        }
       };
+      playerEl._endHandler = function () {
+        if (!musicFading) startCrossfade();
+      };
+
+      playerEl.addEventListener('timeupdate', playerEl._tuHandler);
+      playerEl.addEventListener('ended', playerEl._endHandler);
+    }
+
+    function startCrossfade() {
+      if (musicFading || !musicEnabled) return;
+      musicFading = true;
+
+      const oldIdx = musicActiveIdx;
+      const newIdx = oldIdx === 0 ? 1 : 0;
+      const oldP = musicPlayers[oldIdx];
+      const newP = musicPlayers[newIdx];
+
+      if (newP._tuHandler) newP.removeEventListener('timeupdate', newP._tuHandler);
+      if (newP._endHandler) newP.removeEventListener('ended', newP._endHandler);
+
+      const track = nextTrack();
+      newP.src = encodeURI(track);
+      newP.currentTime = 0;
+      newP.volume = 0;
+      newP.play().catch(() => {});
+
+      fadeAudio(oldP, oldP.volume, 0, MUSIC_FADE_MS);
+      fadeAudio(newP, 0, musicTargetVolume, MUSIC_FADE_MS, () => {
+        oldP.pause();
+        oldP.src = '';
+        musicFading = false;
+        attachMusicEndHandlers(newP);
+      });
+
+      musicActiveIdx = newIdx;
     }
 
     function ensureMusicPlaying() {
-      if (!musicUnlocked || !musicEnabled) return;
-      const active = musicPlayers[musicActive];
-      if (!active.src) playNextWithFade();
-      else active.play().catch(() => {});
+      if (!musicEnabled) return;
+      const active = musicPlayers[musicActiveIdx];
+      if (active.src && !active.paused) return;
+      if (!active.src) {
+        active.src = encodeURI(nextTrack());
+        active.currentTime = 0;
+        active.volume = 0;
+      }
+      active.play().catch(() => {});
+      fadeAudio(active, 0, musicTargetVolume, 600);
+      attachMusicEndHandlers(active);
     }
 
     function setMusicMood(mood) {
-      if (musicCurrentMood === mood) return;
       musicCurrentMood = mood;
-      if (!musicUnlocked || !musicEnabled) return;
-      // Mood change intentionally triggers a smooth track switch.
-      playNextWithFade();
+      // Never interrupt current track — mood recorded for potential future use.
     }
 
     function setMusicEnabled(enabled) {
       musicEnabled = enabled;
       setMusicButtonState();
-      const active = musicPlayers[musicActive];
-      if (!musicUnlocked) return;
+      const active = musicPlayers[musicActiveIdx];
       if (musicEnabled) {
         ensureMusicPlaying();
-        fadeAudio(active, active.volume, musicTargetVolume, 250);
+        if (!active.paused) fadeAudio(active, active.volume, musicTargetVolume, 300);
       } else {
-        fadeAudio(active, active.volume, 0, 250, () => active.pause());
+        fadeAudio(active, active.volume, 0, 300, () => active.pause());
       }
     }
 
     function setMusicVolume(volume01) {
       musicTargetVolume = Math.max(0, Math.min(1, volume01));
-      const active = musicPlayers[musicActive];
+      const active = musicPlayers[musicActiveIdx];
       if (musicEnabled && !active.paused) active.volume = musicTargetVolume;
     }
 
@@ -958,7 +1197,7 @@
     function resetMusicForNewGame() {
       musicCurrentMood = 'calm';
       musicQueue = [];
-      if (musicUnlocked && musicEnabled) playNextWithFade();
+      // Current track continues — no interruption on game restart.
     }
 
     // ── Game state ───────────────────────────────────────────────────────────
@@ -993,6 +1232,11 @@
 
     // ── Action log ───────────────────────────────────────────────────────────
     let actionLogEntries = [];
+
+    // ── Game statistics tracking ─────────────────────────────────────────────
+    let killLog      = [];   // { killerType, killerPlayer, killerNickname, victimType, victimPlayer, victimNickname }
+    let totalTurns   = 0;
+    let gameStartTime = Date.now();
 
     // ── AI + turn timer state ────────────────────────────────────────────────
     const TURN_LIMIT_SECONDS = 60;
@@ -1099,14 +1343,21 @@
       const isRez      = unit.type === 'Kněz';
       const rezDone    = isRez && unit.resurrectionUsed;
       const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
-      const canUse     = !unit.abilityUsed && !rezDone && !noDeadAlly;
+      const heroLocked = unit.isHero && unit.heroLevel < 2;
+      const canUse     = !unit.abilityUsed && !rezDone && !noDeadAlly && !heroLocked;
       const cdText = canUse ? 'Připravena — použitelná 1× za tah.'
+        : heroLocked ? `Odemkne se na Level 2 (XP: ${unit.xp}/${HERO_XP_L2}).`
         : rezDone    ? 'Použita (1× za hru).'
         : noDeadAlly ? 'Žádná padlá spojenecká jednotka.'
         : 'Již použita tento tah.';
+      let extraHtml = '';
+      if (unit.isHero && unit.heroLevel >= 3) {
+        const indText = unit.indomitableUsed ? '🛡️ Nezlomnost: použita.' : '🛡️ Nezlomnost: aktivní (přežije smrtelný útok s 1 HP).';
+        extraHtml = `<div class="tt-cd" style="margin-top:4px">${indText}</div>`;
+      }
       return `<div class="tt-title">${ab.icon} ${ab.name}</div>
               <div class="tt-desc">${ab.desc}</div>
-              <div class="tt-cd">${cdText}</div>`;
+              <div class="tt-cd">${cdText}</div>${extraHtml}`;
     }
 
     // ── Attack preview ────────────────────────────────────────────────────────
@@ -1117,10 +1368,11 @@
       const castleBonus = ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
       const shieldBonus = defender.shieldWall ? 2 : 0;
       const bridgePenalty = getTerrainAt(defender.x, defender.y) === 'Most' ? 1 : 0;
-      const totalAtk    = baseAtk + atkBonus;
+      const cryBonus    = attacker.battleCryBonus || 0;
+      const totalAtk    = baseAtk + atkBonus + cryBonus;
       const totalDef    = Math.max(0, defBonus + castleBonus + shieldBonus - bridgePenalty);
       const damage      = Math.max(0, totalAtk - totalDef);
-      return { baseAtk, atkBonus, defBonus, castleBonus, shieldBonus, bridgePenalty, totalAtk, totalDef, damage };
+      return { baseAtk, atkBonus, defBonus, castleBonus, shieldBonus, bridgePenalty, cryBonus, totalAtk, totalDef, damage };
     }
 
     function buildAttackTooltipHtml(attacker, defender, ignoreTerrain = false) {
@@ -1132,6 +1384,7 @@
       if (attacker.type === 'Rytíř') atkLine = `${attacker.attack} + 1 Rytíř = ${p.baseAtk}`;
       const mods = [];
       if (p.atkBonus)    mods.push(`<span style="color:#d4aa50">+${p.atkBonus} kopec</span>`);
+      if (p.cryBonus)    mods.push(`<span style="color:#f0d060">+${p.cryBonus} pokřik</span>`);
       if (ignoreTerrain) mods.push(`<span style="color:#60b8e0">🎯 přesná</span>`);
       const atkMods = mods.length ? ` ${mods.join(' ')}` : '';
 
@@ -1196,7 +1449,8 @@
       const isRez = unit.type === 'Kněz';
       const rezDone = isRez && unit.resurrectionUsed;
       const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
-      const canUse = ab && !unit.abilityUsed && !rezDone && !noDeadAlly;
+      const heroLocked = unit.isHero && unit.heroLevel < 2;
+      const canUse = ab && !unit.abilityUsed && !rezDone && !noDeadAlly && !heroLocked;
       const abLabel = ab
         ? `✨ Použít schopnost: ${ab.name}`
         : '✨ Schopnost nedostupná';
@@ -1286,6 +1540,11 @@
       actionLogEntries = [];
       attackReveal = new Map();
       turnSecondsLeft = TURN_LIMIT_SECONDS;
+      killLog = [];
+      totalTurns = 0;
+      gameStartTime = Date.now();
+      document.getElementById('statsScreen').classList.add('hidden');
+      document.getElementById('statsScreen').classList.remove('visible');
       renderActionLog();
       updateTurnTimerUI();
       updateWeatherUI();
@@ -1329,7 +1588,11 @@
         [{x:0,y:0},{x:2,y:0},{x:0,y:2},{x:3,y:1},{x:1,y:3}],
         [{x:8,y:8},{x:6,y:8},{x:8,y:6},{x:5,y:7},{x:7,y:5}]
       ];
+      const heroPositions = [{ x: 4, y: 1 }, { x: 4, y: 7 }];
+      const spyPositions  = [{ x: 1, y: 1 }, { x: 7, y: 7 }];
+
       for (let player = 1; player <= 2; player++) {
+        // Place regular units
         initialPositions[player - 1].forEach((pos, index) => {
           const base = baseUnits[index];
           const unit = {
@@ -1357,11 +1620,86 @@
           units.push(unit);
           getHex(pos.x, pos.y).unit = unit;
         });
+
+        // Place hero
+        const hp = HERO_BASE.hp;
+        const hPos = heroPositions[player - 1];
+        const hero = {
+          id: `${player}-hero`,
+          player,
+          x: hPos.x,
+          y: hPos.y,
+          type: HERO_BASE.type,
+          isHero: true,
+          move: HERO_BASE.move,
+          attack: HERO_BASE.attack,
+          range: HERO_BASE.range,
+          hp,
+          maxHp: hp,
+          symbol: HERO_BASE.symbol,
+          moved: false,
+          attacked: false,
+          kills: 0,
+          rank: 0,
+          nickname: null,
+          abilityUsed: false,
+          shieldWall: false,
+          precisionShot: false,
+          resurrectionUsed: false,
+          xp: 0,
+          heroLevel: 1,
+          indomitableUsed: false,
+          wasAttackedThisTurn: false,
+          battleCryBonus: 0,
+        };
+        units.push(hero);
+        getHex(hPos.x, hPos.y).unit = hero;
+
+        // Place spy
+        const spyBase = baseUnits.find(b => b.type === 'Špión');
+        const sPos = spyPositions[player - 1];
+        const spy = {
+          id: `${player}-spy`,
+          player,
+          x: sPos.x,
+          y: sPos.y,
+          type: spyBase.type,
+          isSpy: true,
+          move: spyBase.move,
+          attack: spyBase.attack,
+          range: spyBase.range,
+          hp: spyBase.hp,
+          maxHp: spyBase.hp,
+          symbol: spyBase.symbol,
+          moved: false,
+          attacked: false,
+          kills: 0,
+          rank: 0,
+          nickname: null,
+          abilityUsed: false,
+          shieldWall: false,
+          precisionShot: false,
+          resurrectionUsed: false,
+          sabotageCount: 0,
+        };
+        units.push(spy);
+        getHex(sPos.x, sPos.y).unit = spy;
       }
     }
 
     function getHex(x, y)  { return hexes.find(cell => cell.x === x && cell.y === y); }
     function hasPoint(list, x, y) { return list.some(p => p.x === x && p.y === y); }
+
+    // Spy stealth: spy is visible to `observingPlayer` only if they have a unit adjacent (dist ≤ 1)
+    function isSpyVisibleTo(spy, observingPlayer) {
+      return units.some(u => u.player === observingPlayer && hexDistance(u, spy) <= 1);
+    }
+    // Returns true if a unit should be rendered / known to `observingPlayer`
+    function isUnitVisibleTo(unit, observingPlayer) {
+      if (!unit.isSpy) return true;
+      if (unit.player === observingPlayer) return true;
+      return isSpyVisibleTo(unit, observingPlayer);
+    }
     function isBridge(x, y) { return hasPoint(BRIDGES, x, y); }
     function isFord(x, y) { return hasPoint(FORDS, x, y); }
     function isRiver(x, y) { return hasPoint(RIVER_PATH, x, y) && !isBridge(x, y) && !isFord(x, y); }
@@ -1436,7 +1774,8 @@
       validAttacks = calculateAttackTargets(unit);
       validHeals   = calculateHealTargets(unit);
       const displayName = unit.nickname || unit.type;
-      const extra = unit.type === 'Kněz' ? ' Může léčit spojence.' : '';
+      const extra = unit.type === 'Kněz' ? ' Může léčit spojence.'
+        : unit.isHero ? ` ♛ Hrdina Lv.${unit.heroLevel} (${unit.xp} XP).` : '';
       setMessage(`Vybrán ${displayName}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.${extra}`);
       renderBoard();
     }
@@ -1465,12 +1804,25 @@
       const castleBonus= ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
       const shieldBonus= defender.shieldWall ? 2 : 0;
       const bridgePenalty = getTerrainAt(defender.x, defender.y) === 'Most' ? 1 : 0;
-      const damage     = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus + bridgePenalty);
+      const cryBonus   = attacker.battleCryBonus || 0;
+      const damage     = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus + bridgePenalty + cryBonus);
 
       flashTile(defender.x, defender.y);
       defender.hp = Math.max(0, defender.hp - damage);
       attacker.attacked = true;
       if (attacker.precisionShot) attacker.precisionShot = false;
+
+      // Hero: track if attacked and survived (for survival XP)
+      if (defender.isHero && defender.hp > 0) {
+        defender.wasAttackedThisTurn = true;
+      }
+
+      // Nezlomnost (Indomitable): hero survives fatal hit with 1 HP, once per game
+      if (defender.isHero && defender.hp <= 0 && defender.heroLevel >= 3 && !defender.indomitableUsed) {
+        defender.hp = 1;
+        defender.indomitableUsed = true;
+        showAnnounce(`🛡️ Nezlomnost! ${defender.nickname || 'Hrdina'} přežívá s 1 HP!`, 2800);
+      }
 
       // If attacker struck from outside fog-player's visibility, reveal their position for 2 turns
       const fogP = aiEnabled ? 1 : currentPlayer;
@@ -1487,6 +1839,7 @@
       if (castleBonus)   bonusInfo.push(`−${castleBonus} hrad`);
       if (shieldBonus)   bonusInfo.push(`−${shieldBonus} štít`);
       if (bridgePenalty) bonusInfo.push(`+${bridgePenalty} most`);
+      if (cryBonus)      bonusInfo.push(`+${cryBonus} pokřik`);
       if (ignoreTerrain) bonusInfo.push('🎯 přesná');
       const info = bonusInfo.length ? ` (${bonusInfo.join(', ')})` : '';
       const aName = attacker.nickname || attacker.type;
@@ -1496,6 +1849,18 @@
       if (defender.hp <= 0) {
         attacker.kills += 1;
         checkPromotion(attacker);
+        // Hero XP for kill
+        if (attacker.isHero) {
+          attacker.xp += 10;
+          checkHeroLevelUp(attacker);
+        }
+        // Record kill for statistics
+        killLog.push({
+          killerType: attacker.type, killerPlayer: attacker.player,
+          killerNickname: attacker.nickname || null,
+          victimType: defender.type,  victimPlayer: defender.player,
+          victimNickname: defender.nickname || null,
+        });
         setTimeout(() => {
           const dN = defender.nickname || defender.type;
           removeUnit(defender);
@@ -1544,6 +1909,13 @@
       if (dest.unit) return;
       const fromEl = start.tile.querySelector('.unit');
       if (fromEl) pendingMoveAnim = { unitId: unit.id, fromRect: fromEl.getBoundingClientRect() };
+      // Spy leaving a castle resets sabotage counter
+      if (unit.isSpy) {
+        const prevCastle = getCastleAt(unit.x, unit.y);
+        if (!prevCastle || prevCastle.owner === unit.player || (prevCastle.x !== x || prevCastle.y !== y)) {
+          unit.sabotageCount = 0;
+        }
+      }
       start.unit = null;
       dest.unit  = unit;
       unit.x = x;
@@ -1560,17 +1932,59 @@
     }
 
     function removeUnit(unit) {
-      lastKilledFriendly[unit.player] = {
-        id: unit.id, player: unit.player, type: unit.type,
-        move: unit.move, attack: unit.attack, range: unit.range,
-        maxHp: unit.maxHp, symbol: unit.symbol,
-        kills: unit.kills, rank: unit.rank, nickname: unit.nickname,
-        abilityUsed: false, shieldWall: false, precisionShot: false, resurrectionUsed: false,
-      };
+      if (!unit.isHero) {
+        lastKilledFriendly[unit.player] = {
+          id: unit.id, player: unit.player, type: unit.type,
+          move: unit.move, attack: unit.attack, range: unit.range,
+          maxHp: unit.maxHp, symbol: unit.symbol,
+          kills: unit.kills, rank: unit.rank, nickname: unit.nickname,
+          abilityUsed: false, shieldWall: false, precisionShot: false, resurrectionUsed: false,
+        };
+      }
       const hex = getHex(unit.x, unit.y);
       if (hex) hex.unit = null;
       units = units.filter(item => item.id !== unit.id);
       if (selectedUnit?.id === unit.id) selectedUnit = null;
+      if (unit.isHero) {
+        const winner = unit.player === 1 ? 2 : 1;
+        setTimeout(() => declareWinner(winner, true), 350);
+      }
+    }
+
+    function getHero(player) {
+      return units.find(u => u.player === player && u.isHero) || null;
+    }
+
+    function checkHeroLevelUp(hero) {
+      if (hero.heroLevel === 1 && hero.xp >= HERO_XP_L2) {
+        hero.heroLevel = 2;
+        hero.maxHp  += 2;
+        hero.hp      = Math.min(hero.hp + 2, hero.maxHp);
+        hero.attack += 1;
+        showAnnounce(`♛ Hrdina dosáhl Levelu 2! 📣 Bojový pokřik odemčen!`, 3500);
+        renderBoard();
+      } else if (hero.heroLevel >= 2 && hero.xp >= HERO_XP_L3) {
+        hero.heroLevel = 3;
+        hero.maxHp  += 2;
+        hero.hp      = Math.min(hero.hp + 2, hero.maxHp);
+        hero.move   += 1;
+        showAnnounce(`♛ Hrdina dosáhl Levelu 3! 🛡️ Nezlomnost odemčena!`, 3500);
+        renderBoard();
+      }
+    }
+
+    function activateBattleCry(hero) {
+      if (!hero || hero.heroLevel < 2 || hero.abilityUsed) {
+        setMessage('📣 Bojový pokřik není dostupný (vyžaduje Level 2, 1× za tah).');
+        return;
+      }
+      hero.abilityUsed = true;
+      hero.battleCryBonus = (hero.battleCryBonus || 0) + 1;
+      const allies = units.filter(u => u.player === hero.player && u.id !== hero.id);
+      const inRange = allies.filter(a => hexDistance(a, hero) <= 2);
+      inRange.forEach(a => { a.battleCryBonus = (a.battleCryBonus || 0) + 1; });
+      setMessage(`📣 Bojový pokřik! Hrdina + ${inRange.length} spojenec(ů) získává +1 útok.`);
+      renderBoard();
     }
 
     function endTurn() {
@@ -1591,17 +2005,45 @@
         if (turns <= 1) attackReveal.delete(key);
         else attackReveal.set(key, turns - 1);
       });
+      // Hero survival XP: if hero was attacked this turn and survived, +2 XP
+      const leavingHero = getHero(leavingPlayer);
+      if (leavingHero && leavingHero.wasAttackedThisTurn) {
+        leavingHero.xp += 2;
+        leavingHero.wasAttackedThisTurn = false;
+        checkHeroLevelUp(leavingHero);
+      }
+
+      // Spy sabotage: increment counter if standing on enemy castle; capture after 2 turns
+      units.filter(u => u.player === leavingPlayer && u.isSpy).forEach(spy => {
+        const c = getCastleAt(spy.x, spy.y);
+        if (c && c.owner !== spy.player) {
+          spy.sabotageCount = (spy.sabotageCount || 0) + 1;
+          if (spy.sabotageCount >= 2) {
+            c.owner = spy.player;
+            spy.sabotageCount = 0;
+            showAnnounce(`🗡️ Sabotáž! ${spy.nickname || 'Špión'} ovládl hrad pro Hráče ${spy.player}!`, 3000);
+          } else {
+            setMessage(`🗡️ Špiónská sabotáž probíhá… (${spy.sabotageCount}/2 tahů)`);
+          }
+        } else if (!c || c.owner === spy.player) {
+          spy.sabotageCount = 0;
+        }
+      });
+
       units.forEach(unit => {
         if (unit.player === currentPlayer) {
-          unit.moved        = false;
-          unit.attacked     = false;
-          unit.abilityUsed  = false;
-          unit.shieldWall   = false;
-          unit.precisionShot= false;
+          unit.moved           = false;
+          unit.attacked        = false;
+          unit.abilityUsed     = false;
+          unit.shieldWall      = false;
+          unit.precisionShot   = false;
+          unit.battleCryBonus  = 0;
+          if (unit.isHero) unit.wasAttackedThisTurn = false;
         }
       });
 
       if (currentPlayer === 1) {
+        totalTurns++;
         weatherTurnCounter++;
         if (weatherTurnCounter >= WEATHER_CHANGE_INTERVAL) {
           changeWeather();
@@ -1727,7 +2169,8 @@
         const attacks = calculateAttackTargets(unit);
         if (!attacks.length) continue;
         const targets = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
-        targets.sort((a, b) => a.hp - b.hp);
+        // Prefer attacking hero when available, otherwise weakest
+        targets.sort((a, b) => (b.isHero ? 1 : 0) - (a.isHero ? 1 : 0) || (a.hp - b.hp));
         performAttack(unit, targets[0]);
         return;
       }
@@ -1767,6 +2210,60 @@
       const enemies = units.filter(u => u.player === 1);
       if (aiUseAbilities(aiUnits)) return;
 
+      const ownHero   = getHero(2);
+      const enemyHero = getHero(1);
+
+      // Hard: protect own hero — if hero can be attacked by enemy next turn, retreat it first.
+      if (ownHero && !ownHero.attacked) {
+        const heroAtRisk = enemies.some(e => {
+          const eAtks = calculateAttackTargets(e);
+          return eAtks.some(a => a.x === ownHero.x && a.y === ownHero.y);
+        });
+        if (heroAtRisk && ownHero.hp < ownHero.maxHp * 0.5) {
+          // Retreat hero away from danger
+          const safeMove = calculateMoveTargets(ownHero).filter(pos => {
+            return !enemies.some(e => {
+              const ea = calculateAttackTargets(e);
+              return ea.some(a => a.x === pos.x && a.y === pos.y);
+            });
+          });
+          if (safeMove.length) {
+            safeMove.sort((a, b) =>
+              (enemies.reduce((s, e) => s + hexDistance(e, b), 0) -
+               enemies.reduce((s, e) => s + hexDistance(e, a), 0))
+            );
+            const dest = safeMove[0];
+            const fromHex = getHex(ownHero.x, ownHero.y);
+            const toHex   = getHex(dest.x, dest.y);
+            if (toHex && !toHex.unit) {
+              fromHex.unit = null;
+              toHex.unit = ownHero;
+              ownHero.x = dest.x; ownHero.y = dest.y;
+              ownHero.moved = true;
+              endTurn(); return;
+            }
+          }
+        }
+      }
+
+      // Hard: actively target the enemy hero when in range.
+      if (enemyHero) {
+        for (const unit of aiUnits) {
+          const attacks = calculateAttackTargets(unit);
+          if (attacks.some(a => a.x === enemyHero.x && a.y === enemyHero.y)) {
+            performAttack(unit, enemyHero);
+            return;
+          }
+        }
+        // Move toward enemy hero if hero is low HP
+        if (enemyHero.hp < enemyHero.maxHp * 0.5) {
+          const attackers = aiUnits.filter(u => u.type !== 'Kněz' && !u.moved);
+          for (const unit of attackers) {
+            if (moveUnitTowardTarget(unit, enemyHero, true)) return;
+          }
+        }
+      }
+
       // Hard: protect veteran units and avoid terrain disadvantages.
       for (const unit of aiUnits.filter(u => u.rank >= 2)) {
         const attacks = calculateAttackTargets(unit);
@@ -1777,7 +2274,8 @@
           return terr !== 'Les' && !getCastleAt(t.x, t.y);
         });
         const pool = safeTargets.length ? safeTargets : targets;
-        pool.sort((a, b) => a.hp - b.hp);
+        // Prioritize hero targets
+        pool.sort((a, b) => (b.isHero ? 1 : 0) - (a.isHero ? 1 : 0) || (a.hp - b.hp));
         performAttack(unit, pool[0]);
         return;
       }
@@ -1787,7 +2285,8 @@
         const attacks = calculateAttackTargets(unit);
         if (!attacks.length) continue;
         const targets = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
-        targets.sort((a, b) => (b.rank - a.rank) || (a.hp - b.hp));
+        // Hero gets highest attack priority
+        targets.sort((a, b) => (b.isHero ? 2 : 0) - (a.isHero ? 2 : 0) || (b.rank - a.rank) || (a.hp - b.hp));
         performAttack(unit, targets[0]);
         return;
       }
@@ -1809,11 +2308,27 @@
         }
       }
 
+      // Hard: spy infiltration — send spy toward enemy castle via a flanking route
+      const aiSpy = aiUnits.find(u => u.isSpy && !u.moved);
+      if (aiSpy) {
+        const enemyCastleTargets = castles.filter(c => c.owner !== 2);
+        if (enemyCastleTargets.length) {
+          const spyTarget = enemyCastleTargets.reduce((best, c) =>
+            hexDistance(aiSpy, c) < hexDistance(aiSpy, best) ? c : best, enemyCastleTargets[0]);
+          // If already on an enemy castle, stay (sabotage is auto — spy should NOT move)
+          if (aiSpy.x === spyTarget.x && aiSpy.y === spyTarget.y) {
+            // Spy stays put to build sabotage count
+          } else if (moveUnitTowardTarget(aiSpy, spyTarget, false)) {
+            return;
+          }
+        }
+      }
+
       const enemyCastles = castles.filter(c => c.owner !== 2);
       if (enemyCastles.length) {
-        // Hard: prioritize castle capture with non-priest units first.
+        // Hard: prioritize castle capture with non-priest, non-spy units first.
         const attackers = aiUnits
-          .filter(u => u.type !== 'Kněz')
+          .filter(u => u.type !== 'Kněz' && !u.isSpy)
           .sort((a, b) => b.rank - a.rank || b.hp - a.hp);
         for (const unit of attackers) {
           const target = enemyCastles.reduce((best, c) =>
@@ -1826,9 +2341,14 @@
       if (!enemies.length) { endTurn(); return; }
       const ordered = aiUnits.slice().sort((a, b) => b.rank - a.rank || b.hp - a.hp);
       for (const unit of ordered) {
-        if (unit.type === 'Kněz') continue;
+        if (unit.type === 'Kněz' || unit.isSpy) continue;
         const nearestEnemy = pickNearestEnemy(unit, enemies);
         if (nearestEnemy && moveUnitTowardTarget(unit, nearestEnemy, true)) return;
+      }
+      // Spy fallback: if no other unit moved, let spy also apply pressure
+      if (aiSpy && !aiSpy.moved) {
+        const nearestE = pickNearestEnemy(aiSpy, enemies);
+        if (nearestE && moveUnitTowardTarget(aiSpy, nearestE, false)) return;
       }
       endTurn();
     }
@@ -1836,22 +2356,124 @@
     function checkGameOver() {
       const p1 = units.filter(u => u.player === 1).length;
       const p2 = units.filter(u => u.player === 2).length;
-      if (p1 === 0) { declareWinner('Hráč 2 (modrý)'); return true; }
-      if (p2 === 0) { declareWinner('Hráč 1 (žlutý)'); return true; }
+      if (p1 === 0) { declareWinner(2); return true; }
+      if (p2 === 0) { declareWinner(1); return true; }
       const p1Castles = castles.filter(c => c.owner === 1).length;
       const p2Castles = castles.filter(c => c.owner === 2).length;
-      if (p1Castles === castles.length) { declareWinner('Hráč 1 (žlutý) — ovládá oba hrady'); return true; }
-      if (p2Castles === castles.length) { declareWinner('Hráč 2 (modrý) — ovládá oba hrady'); return true; }
+      if (p1Castles === castles.length) { declareWinner(1); return true; }
+      if (p2Castles === castles.length) { declareWinner(2); return true; }
       return false;
     }
 
-    function declareWinner(winner) {
+    function declareWinner(winner, heroKilled = false) {
       setMusicMood('victory');
       stopTurnTimer();
       clearAiSchedule();
       cancelTurnEndBanner();
-      turnText.textContent = `${winner} vyhrává!`;
-      setMessage(`Konec hry. Vítěz: ${winner}.`);
+      const reason = heroKilled ? ' (Hrdina padl!)' : '';
+      turnText.textContent = `Hráč ${winner} vyhrává!${reason}`;
+      setMessage(`Konec hry${reason} Vítěz: Hráč ${winner}.`);
+      setTimeout(() => showStatsScreen(winner, heroKilled), 1400);
+    }
+
+    function showStatsScreen(winner, heroKilled = false) {
+      const elapsed   = Math.round((Date.now() - gameStartTime) / 1000);
+      const minutes   = Math.floor(elapsed / 60);
+      const seconds   = elapsed % 60;
+      const timeStr   = minutes > 0 ? `${minutes} min ${seconds} s` : `${seconds} s`;
+      const p1Color   = '#d9be83';
+      const p2Color   = '#739cc6';
+      const pColor    = (p) => p === 1 ? p1Color : p2Color;
+      const pName     = (p) => `Hráč ${p} (${p === 1 ? 'žlutý' : 'modrý'})`;
+
+      // ── Winner banner ──
+      const winnerColor = winner === 1 ? '#f0d060' : '#80aade';
+      document.getElementById('statsWinnerBanner').innerHTML =
+        `<span style="color:${winnerColor}">⚔️ ${pName(winner)} vítězí!${heroKilled ? ' <span style="font-size:0.65em;color:#e88">Hrdina padl!</span>' : ''}</span>`;
+
+      // ── Meta ──
+      document.getElementById('statsMeta').textContent =
+        `Celkem tahů: ${totalTurns} · Délka hry: ${timeStr}`;
+
+      // ── MVP ── (survivor with most kills)
+      const mvp = units.filter(u => u.kills > 0).sort((a, b) => b.kills - a.kills)[0] || null;
+      let mvpHtml = '<div style="color:#9a9080;font-size:0.78rem">— žádné eliminations —</div>';
+      if (mvp && mvp.kills > 0) {
+        const pct = Math.round(mvp.hp / mvp.maxHp * 100);
+        mvpHtml = `<div class="stats-mvp-card">
+          <div class="stats-mvp-name">${mvp.nickname || mvp.type}</div>
+          <div style="color:${pColor(mvp.player)};font-size:0.78rem;margin-top:2px">${pName(mvp.player)}</div>
+          <div style="font-size:0.8rem;margin-top:6px">
+            💀 ${mvp.kills} ${mvp.kills === 1 ? 'kill' : 'killů'} &nbsp;·&nbsp; ${RANK_ICONS[mvp.rank] || 'Rekrut'}
+          </div>
+          <div style="font-size:0.75rem;color:#9a9080;margin-top:4px">HP: ${mvp.hp}/${mvp.maxHp} (${pct}%)</div>
+        </div>`;
+      }
+      document.getElementById('statsMvp').innerHTML = mvpHtml;
+
+      // ── Heroes ──
+      let heroesHtml = '';
+      for (const p of [1, 2]) {
+        const hero = units.find(u => u.player === p && u.isHero);
+        if (hero) {
+          const lvl = hero.heroLevel;
+          heroesHtml += `<div class="stats-hero-row">
+            <span style="color:${pColor(p)}">♛</span>
+            <span style="color:${pColor(p)};font-weight:600">${pName(p)}</span>
+            <span style="color:#9a9080;font-size:0.72rem">Lv.${lvl} · ${hero.xp} XP · ${hero.hp}/${hero.maxHp} HP</span>
+          </div>`;
+        } else {
+          heroesHtml += `<div class="stats-hero-row" style="color:#9a9080">♛ ${pName(p)}: <em>padl</em></div>`;
+        }
+      }
+      document.getElementById('statsHeroes').innerHTML = heroesHtml || '<div style="color:#9a9080;font-size:0.78rem">—</div>';
+
+      // ── Survivors ──
+      let survHtml = '';
+      for (const p of [1, 2]) {
+        const pUnits = units.filter(u => u.player === p);
+        survHtml += `<div style="color:${pColor(p)};font-weight:600;font-size:0.75rem;margin:5px 0 3px">${pName(p)} (${pUnits.length})</div>`;
+        if (pUnits.length === 0) {
+          survHtml += `<div style="color:#9a9080;font-size:0.75rem;margin-bottom:6px">— všichni padli —</div>`;
+        } else {
+          pUnits.forEach(u => {
+            const pct = Math.round(u.hp / u.maxHp * 100);
+            const fill = `<div class="hp-bar-sm-fill p${p}" style="width:${pct}%"></div>`;
+            survHtml += `<div class="stats-survivor-row">
+              <span style="color:${pColor(p)}">${u.symbol}</span>
+              <span>${u.nickname || u.type}</span>
+              <div class="hp-bar-sm">
+                <div class="hp-bar-sm-bg">${fill}</div>
+                <span style="font-size:0.68rem;color:#9a9080">${u.hp}/${u.maxHp}</span>
+              </div>
+              ${u.kills > 0 ? `<span style="font-size:0.7rem;color:#c8a858">💀${u.kills}</span>` : ''}
+            </div>`;
+          });
+        }
+      }
+      document.getElementById('statsSurvivors').innerHTML = survHtml;
+
+      // ── Kill log ──
+      let killHtml = '';
+      if (killLog.length === 0) {
+        killHtml = '<div style="color:#9a9080;font-size:0.75rem">— žádné souboje —</div>';
+      } else {
+        killLog.forEach(k => {
+          const kName = k.killerNickname || k.killerType;
+          const vName = k.victimNickname || k.victimType;
+          killHtml += `<div class="stats-kill-row">
+            <span class="killer" style="color:${pColor(k.killerPlayer)}">${kName} (H${k.killerPlayer})</span>
+            <span style="color:#6a6058"> zabil </span>
+            <span class="victim" style="color:${pColor(k.victimPlayer)}">${vName} (H${k.victimPlayer})</span>
+          </div>`;
+        });
+      }
+      document.getElementById('statsKillLog').innerHTML = killHtml;
+
+      // ── Show overlay ──
+      const screen = document.getElementById('statsScreen');
+      screen.classList.remove('hidden');
+      requestAnimationFrame(() => requestAnimationFrame(() => screen.classList.add('visible')));
     }
 
     function calculateMoveTargets(unit, customMove = null) {
@@ -1889,6 +2511,8 @@
       const targets = [];
       units.forEach(enemy => {
         if (enemy.player === unit.player) return;
+        // Enemy spy: only attackable if visible (adjacent friendly)
+        if (!isUnitVisibleTo(enemy, unit.player)) return;
         const dist = hexDistance(unit, enemy);
         if (dist <= effectiveRange) targets.push({ x: enemy.x, y: enemy.y });
       });
@@ -1915,6 +2539,7 @@
         case 'Pěšák':     activateShieldWall(unit);    break;
         case 'Katapult':  activateBombardMode(unit);   break;
         case 'Kněz':      activateResurrection(unit);  break;
+        case 'Hrdina':    activateBattleCry(unit);     break;
       }
     }
 
@@ -2001,7 +2626,16 @@
         const dmg = Math.max(0, unit.attack - (h.unit.shieldWall ? 2 : 0));
         h.unit.hp = Math.max(0, h.unit.hp - dmg);
         hitCount++;
-        if (h.unit.hp <= 0) { unit.kills++; toKill.push(h.unit); }
+        if (h.unit.hp <= 0) {
+          unit.kills++;
+          killLog.push({
+            killerType: unit.type, killerPlayer: unit.player,
+            killerNickname: unit.nickname || null,
+            victimType: h.unit.type, victimPlayer: h.unit.player,
+            victimNickname: h.unit.nickname || null,
+          });
+          toKill.push(h.unit);
+        }
       });
       checkPromotion(unit);
       toKill.forEach(u => removeUnit(u));
@@ -2097,6 +2731,15 @@
       for (const u of aiUnits) {
         if (u.type !== 'Pěšák' || u.abilityUsed) continue;
         if (u.hp < u.maxHp * 0.4) { activateShieldWall(u); return true; }
+      }
+      // Hero: use Battle Cry if there are allies in range and enemies to attack
+      for (const u of aiUnits) {
+        if (!u.isHero || u.abilityUsed || u.heroLevel < 2) continue;
+        const nearby = aiUnits.filter(a => a.id !== u.id && hexDistance(a, u) <= 2);
+        if (nearby.length > 0 && calculateAttackTargets(u).length > 0) {
+          activateBattleCry(u);
+          return false; // don't end turn — hero continues
+        }
       }
       return false;
     }
@@ -2202,13 +2845,14 @@
         const [x, y] = key.split(',').map(Number);
         const hex    = getHex(x, y);
         const enemy  = hex.unit && hex.unit.player !== player ? hex.unit : null;
-        if (enemy) {
+        if (enemy && isUnitVisibleTo(enemy, player)) {
           lastKnownEnemies[player].set(key, {
             symbol: enemy.symbol, player: enemy.player,
             hp: enemy.hp, maxHp: enemy.maxHp, type: enemy.type,
-            rank: enemy.rank, nickname: enemy.nickname,
+            rank: enemy.rank, nickname: enemy.nickname, isHero: enemy.isHero || false,
+            isSpy: enemy.isSpy || false,
           });
-        } else {
+        } else if (!enemy || !isUnitVisibleTo(enemy, player)) {
           lastKnownEnemies[player].delete(key);
         }
       });
@@ -2235,12 +2879,19 @@
       let cls   = `unit player${unit.player}`;
       if (ghost) cls += ' ghost';
       if (!ghost && unit.rank === 3) cls += ' rank-legend';
+      if (unit.isHero) cls += ' hero';
       el.className = cls;
       const svgMarkup = UNIT_SVGS[unit.type];
       if (svgMarkup) {
         el.innerHTML = svgMarkup;
       } else {
         el.textContent = unit.symbol;
+      }
+      if (unit.isHero) {
+        const crown = document.createElement('div');
+        crown.className = 'hero-crown';
+        crown.textContent = '♛';
+        el.appendChild(crown);
       }
       if (unit.rank > 0) {
         const stars = document.createElement('div');
@@ -2306,22 +2957,36 @@
         if (validHeals.some(p   => p.x === x && p.y === y)) tile.classList.add('heal-target');
 
         if (hex.unit) {
-          const unitEl = makeUnitEl(hex.unit);
-          tile.appendChild(unitEl);
-          if (pendingMoveAnim && hex.unit.id === pendingMoveAnim.unitId) {
-            const { fromRect } = pendingMoveAnim;
-            pendingMoveAnim = null;
-            const toRect = unitEl.getBoundingClientRect();
-            const dx = fromRect.left - toRect.left;
-            const dy = fromRect.top  - toRect.top;
-            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-              unitEl.style.transform  = `translate(${dx}px, ${dy}px)`;
-              unitEl.style.transition = 'none';
-              requestAnimationFrame(() => requestAnimationFrame(() => {
-                unitEl.style.transition = 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)';
-                unitEl.style.transform  = '';
-                setTimeout(() => { unitEl.style.transition = ''; }, 320);
-              }));
+          // Spy stealth: hide enemy spy unless an adjacent friendly can see it
+          const spyHidden = hex.unit.isSpy && hex.unit.player !== fogPlayer && !isSpyVisibleTo(hex.unit, fogPlayer);
+          if (!spyHidden) {
+            const unitEl = makeUnitEl(hex.unit);
+            // Own spy: semi-transparent to indicate stealth mode
+            if (hex.unit.isSpy && hex.unit.player === fogPlayer) {
+              unitEl.classList.add('spy-own');
+              if (hex.unit.sabotageCount > 0) {
+                const sb = document.createElement('div');
+                sb.className = 'sabot-badge';
+                sb.textContent = `🏰${hex.unit.sabotageCount}/2`;
+                unitEl.appendChild(sb);
+              }
+            }
+            tile.appendChild(unitEl);
+            if (pendingMoveAnim && hex.unit.id === pendingMoveAnim.unitId) {
+              const { fromRect } = pendingMoveAnim;
+              pendingMoveAnim = null;
+              const toRect = unitEl.getBoundingClientRect();
+              const dx = fromRect.left - toRect.left;
+              const dy = fromRect.top  - toRect.top;
+              if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                unitEl.style.transform  = `translate(${dx}px, ${dy}px)`;
+                unitEl.style.transition = 'none';
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                  unitEl.style.transition = 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)';
+                  unitEl.style.transform  = '';
+                  setTimeout(() => { unitEl.style.transition = ''; }, 320);
+                }));
+              }
             }
           }
         }
@@ -2350,17 +3015,31 @@
             const pct   = Math.max(0, Math.min(100, Math.round(unit.hp / unit.maxHp * 100)));
             const dname = unit.nickname ? `<span title="${unit.type}">${unit.nickname}</span>` : unit.type;
             const stars = unit.rank > 0 ? `<span class="ur-stars">${RANK_ICONS[unit.rank]}</span>` : '';
+            const heroMark = unit.isHero ? `<span style="color:#f0d060;font-size:0.7rem;margin-left:2px">♛</span>` : '';
+            let xpBarHtml = '';
+            if (unit.isHero) {
+              const lvl = unit.heroLevel;
+              const xpNeeded = lvl === 1 ? HERO_XP_L2 : lvl === 2 ? (HERO_XP_L3 - HERO_XP_L2) : 0;
+              const xpCur    = lvl === 1 ? unit.xp : lvl === 2 ? (unit.xp - HERO_XP_L2) : 0;
+              const xpPct    = xpNeeded > 0 ? Math.min(100, Math.round(xpCur / xpNeeded * 100)) : 100;
+              const xpLabel  = lvl < 3 ? `${xpCur}/${xpNeeded} XP·Lv${lvl}` : `Lv3 MAX`;
+              xpBarHtml = `<div class="xp-bar-row">
+                <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
+                <span class="xp-bar-txt">${xpLabel}</span>
+              </div>`;
+            }
             html += `<div class="unit-row" data-unit-id="${unit.id}">
               <div class="unit-row-top">
                 <span class="ur-icon" style="color:${color}">${unit.symbol}</span>
                 <span class="ur-name" style="color:${color}">${dname}</span>
-                ${stars}
+                ${heroMark}${stars}
                 <span class="ur-kills">${unit.kills}💀</span>
               </div>
               <div class="hp-bar-row">
                 <div class="hp-bar-bg"><div class="hp-bar-fill p${pNum}" style="width:${pct}%"></div></div>
                 <span class="hp-bar-txt">${unit.hp}/${unit.maxHp}</span>
               </div>
+              ${xpBarHtml}
             </div>`;
           });
         }
@@ -2401,6 +3080,16 @@
     restartButton.addEventListener('click', () => {
       createGame();
       resetMusicForNewGame();
+    });
+
+    document.getElementById('statsRestart').addEventListener('click', () => {
+      createGame();
+      resetMusicForNewGame();
+    });
+    document.getElementById('statsClose').addEventListener('click', () => {
+      const screen = document.getElementById('statsScreen');
+      screen.classList.remove('visible');
+      setTimeout(() => screen.classList.add('hidden'), 500);
     });
 
     // ── Board hover: attack preview tooltip ───────────────────────────────────
