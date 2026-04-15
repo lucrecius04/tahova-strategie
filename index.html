@@ -167,6 +167,21 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
     .lp-bottom button.btn-ghost:hover { background: rgba(255,255,255,0.12); }
+    .music-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #musicToggle {
+      width: 44px;
+      min-width: 44px;
+      padding: 8px 0;
+      font-size: 1rem;
+    }
+    #musicVolume {
+      flex: 1;
+      accent-color: var(--highlight);
+    }
 
     /* ── Right panel ── */
     .weather-badge {
@@ -585,6 +600,10 @@
 
       <div class="lp-bottom">
         <button id="aiToggle">AI: Zapnuto</button>
+        <div class="music-controls">
+          <button id="musicToggle" class="btn-ghost" aria-label="Zapnout nebo vypnout hudbu">🔊</button>
+          <input id="musicVolume" type="range" min="0" max="100" value="35" aria-label="Hlasitost hudby">
+        </div>
         <button id="restartButton" class="btn-ghost">Restartovat hru</button>
       </div>
     </aside>
@@ -726,9 +745,134 @@
     const unitStatus    = document.getElementById('unitStatus');
     const restartButton = document.getElementById('restartButton');
     const aiToggleBtn   = document.getElementById('aiToggle');
+    const musicToggleBtn= document.getElementById('musicToggle');
+    const musicVolumeEl = document.getElementById('musicVolume');
     const contextMenu   = document.getElementById('contextMenu');
     const ctxMoveAttack = document.getElementById('ctxMoveAttack');
     const ctxAbility    = document.getElementById('ctxAbility');
+
+    // ── Music system ─────────────────────────────────────────────────────────
+    const MUSIC_FADE_MS = 2000;
+    const MUSIC_TRACKS = [
+      'music/Main.mp3',
+      'music/Fantasy history.mp3',
+      'music/boj.mp3',
+      'music/Hrad relax.mp3',
+      'music/Pruzkum, temno, mlha.mp3'
+    ];
+
+    let musicEnabled = true;
+    let musicUnlocked = false; // first user interaction unlocks browser audio
+    let musicTargetVolume = 0.35;
+    let musicCurrentMood = 'calm';
+    let musicQueue = [];
+    let musicActive = 0;
+
+    const musicPlayers = [new Audio(), new Audio()];
+    musicPlayers.forEach(player => {
+      player.preload = 'auto';
+      player.loop = false;
+      player.volume = 0;
+    });
+
+    function shuffleTracks(list) {
+      const arr = [...list];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function nextTrack() {
+      if (musicQueue.length === 0) musicQueue = shuffleTracks(MUSIC_TRACKS);
+      return musicQueue.shift() || null;
+    }
+
+    function setMusicButtonState() {
+      musicToggleBtn.textContent = musicEnabled ? '🔊' : '🔇';
+    }
+
+    function fadeAudio(player, from, to, duration, done) {
+      const startTime = performance.now();
+      function tick(now) {
+        const progress = Math.min(1, (now - startTime) / duration);
+        player.volume = from + (to - from) * progress;
+        if (progress < 1) requestAnimationFrame(tick);
+        else if (done) done();
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function playNextWithFade(forceTrack = null) {
+      const track = forceTrack || nextTrack();
+      if (!track) return;
+      const from = musicPlayers[musicActive];
+      const toIdx = musicActive === 0 ? 1 : 0;
+      const to = musicPlayers[toIdx];
+
+      to.onended = null;
+      to.src = encodeURI(track);
+      to.currentTime = 0;
+      to.volume = 0;
+      to.play().catch(() => {});
+
+      fadeAudio(from, from.volume, 0, MUSIC_FADE_MS, () => from.pause());
+      fadeAudio(to, to.volume, musicEnabled ? musicTargetVolume : 0, MUSIC_FADE_MS);
+      musicActive = toIdx;
+
+      to.onended = () => {
+        if (!musicUnlocked || !musicEnabled) return;
+        playNextWithFade();
+      };
+    }
+
+    function ensureMusicPlaying() {
+      if (!musicUnlocked || !musicEnabled) return;
+      const active = musicPlayers[musicActive];
+      if (!active.src) playNextWithFade();
+      else active.play().catch(() => {});
+    }
+
+    function setMusicMood(mood) {
+      if (musicCurrentMood === mood) return;
+      musicCurrentMood = mood;
+      if (!musicUnlocked || !musicEnabled) return;
+      // Mood change intentionally triggers a smooth track switch.
+      playNextWithFade();
+    }
+
+    function setMusicEnabled(enabled) {
+      musicEnabled = enabled;
+      setMusicButtonState();
+      const active = musicPlayers[musicActive];
+      if (!musicUnlocked) return;
+      if (musicEnabled) {
+        ensureMusicPlaying();
+        fadeAudio(active, active.volume, musicTargetVolume, 250);
+      } else {
+        fadeAudio(active, active.volume, 0, 250, () => active.pause());
+      }
+    }
+
+    function setMusicVolume(volume01) {
+      musicTargetVolume = Math.max(0, Math.min(1, volume01));
+      const active = musicPlayers[musicActive];
+      if (musicEnabled && !active.paused) active.volume = musicTargetVolume;
+    }
+
+    function unlockMusicOnce() {
+      if (musicUnlocked) return;
+      musicUnlocked = true;
+      ensureMusicPlaying();
+      window.removeEventListener('pointerdown', unlockMusicOnce);
+    }
+
+    function resetMusicForNewGame() {
+      musicCurrentMood = 'calm';
+      musicQueue = [];
+      if (musicUnlocked && musicEnabled) playNextWithFade();
+    }
 
     // ── Game state ───────────────────────────────────────────────────────────
     let hexes = [];
@@ -1123,6 +1267,7 @@
     }
 
     function performAttack(attacker, defender, ignoreTerrain = false) {
+      setMusicMood('dramatic');
       const baseAtk    = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
       const atkBonus   = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
       const defBonus   = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
@@ -1200,6 +1345,7 @@
     }
 
     function moveUnit(unit, x, y) {
+      setMusicMood('calm');
       const start = getHex(unit.x, unit.y);
       const dest  = getHex(x, y);
       if (dest.unit) return;
@@ -1376,6 +1522,7 @@
     }
 
     function declareWinner(winner) {
+      setMusicMood('victory');
       turnText.textContent = `${winner} vyhrává!`;
       setMessage(`Konec hry. Vítěz: ${winner}.`);
     }
@@ -1509,6 +1656,7 @@
     }
 
     function performBombardment(unit, cx, cy) {
+      setMusicMood('dramatic');
       abilityMode  = null; abilityUnit = null;
       unit.attacked = true;
       const aoeHexes = [{ x: cx, y: cy }, ...neighbors(cx, cy)];
@@ -1901,7 +2049,14 @@
       aiToggleBtn.textContent = `AI: ${aiEnabled ? 'Zapnuto' : 'Vypnuto'}`;
     });
 
-    restartButton.addEventListener('click', createGame);
+    musicToggleBtn.addEventListener('click', () => setMusicEnabled(!musicEnabled));
+    musicVolumeEl.addEventListener('input', (e) => setMusicVolume(Number(e.target.value) / 100));
+    window.addEventListener('pointerdown', unlockMusicOnce, { passive: true });
+
+    restartButton.addEventListener('click', () => {
+      createGame();
+      resetMusicForNewGame();
+    });
 
     // ── Board hover: attack preview tooltip ───────────────────────────────────
     boardElement.addEventListener('mouseover', (e) => {
@@ -1954,6 +2109,8 @@
     });
     unitStatus.addEventListener('mouseleave', hideTooltip);
 
+    setMusicButtonState();
+    setMusicVolume(Number(musicVolumeEl.value) / 100);
     createGame();
   </script>
 </body>

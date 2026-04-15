@@ -1,0 +1,7 @@
+Toto je tahová středověká strategická hra v čistém HTML/CSS/JS (jeden soubor index.html).
+
+- Nikdy nerozbij existující herní logiku
+- Komentáře piš česky
+- Zachovej fog of war, počasí, veteránský systém a AI logiku
+- Testuj že hra funguje po každé změně
+- Nemazej žádné existující funkce, pouze přidávej nebo opravuj
