@@ -182,6 +182,24 @@
       flex: 1;
       accent-color: var(--highlight);
     }
+    .turn-timer {
+      font-family: 'Cinzel Decorative', 'Cinzel', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      color: #e8dcc8;
+      letter-spacing: 0.04em;
+      padding: 6px 0 2px;
+      user-select: none;
+    }
+    .turn-timer.warning {
+      color: #e06060;
+      animation: timer-pulse 0.8s ease-in-out infinite;
+    }
+    @keyframes timer-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.78; }
+    }
 
     /* ── Right panel ── */
     .weather-badge {
@@ -280,6 +298,17 @@
       color: var(--text);
       transition: filter 0.18s ease;
     }
+    .tile::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      pointer-events: none;
+      z-index: 1;
+    }
     /* Overlay tint — clipped to hex shape by parent clip-path */
     .tile::after {
       content: '';
@@ -343,6 +372,50 @@
           rgba(255,255,255,0.04) 7px, rgba(255,255,255,0.04) 8px,
           transparent 8px
         );
+    }
+    @keyframes river-flow {
+      0% { background-position: 0 0, 0 0, 0 0; }
+      100% { background-position: 0 52px, 62px 0, 0 0; }
+    }
+    .tile[data-terrain="Řeka"] {
+      background-color: #2e6ea8;
+      background-image:
+        repeating-linear-gradient(
+          180deg,
+          rgba(150,220,255,0.2) 0, rgba(150,220,255,0.2) 6px,
+          rgba(20,90,160,0.3) 6px, rgba(20,90,160,0.3) 12px
+        ),
+        repeating-linear-gradient(
+          110deg,
+          rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px,
+          transparent 2px, transparent 11px
+        ),
+        radial-gradient(ellipse at 30% 35%, rgba(180,235,255,0.35), transparent 60%);
+      animation: river-flow 2.4s linear infinite;
+    }
+    .tile[data-terrain="Most"] {
+      background:
+        repeating-linear-gradient(
+          90deg,
+          #7a5031 0, #7a5031 8px,
+          #8e623f 8px, #8e623f 16px
+        );
+      border: 1px solid rgba(0,0,0,0.3);
+    }
+    .tile[data-terrain="Most"]::before {
+      content: '🌉';
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    .tile[data-terrain="Přebrod"] {
+      background:
+        linear-gradient(180deg, #86c4dd 0%, #5da2c0 100%);
+    }
+    .tile[data-terrain="Přebrod"]::before {
+      content: '↔';
+      color: rgba(255,255,255,0.9);
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
     }
 
     /* ── Highlights ── */
@@ -600,6 +673,9 @@
 
       <div class="lp-bottom">
         <button id="aiToggle">AI: Zapnuto</button>
+        <button id="aiDifficultyBtn" class="btn-ghost">AI obtížnost: Střední</button>
+        <button id="turnLimitToggle" class="btn-ghost">⏱ Časový limit: Vypnuto</button>
+        <div id="turnTimer" class="turn-timer">60</div>
         <div class="music-controls">
           <button id="musicToggle" class="btn-ghost" aria-label="Zapnout nebo vypnout hudbu">🔊</button>
           <input id="musicVolume" type="range" min="0" max="100" value="35" aria-label="Hlasitost hudby">
@@ -659,11 +735,19 @@
       [0,0,1,1,0,0,2,0,0],
       [1,0,0,0,1,0,0,0,1]
     ];
+    const RIVER_PATH = [
+      { x: 0, y: 4 }, { x: 1, y: 4 }, { x: 2, y: 5 },
+      { x: 3, y: 5 }, { x: 4, y: 4 }, { x: 5, y: 4 },
+      { x: 6, y: 3 }, { x: 7, y: 3 }, { x: 8, y: 4 },
+    ];
+    const BRIDGES = [{ x: 2, y: 5 }, { x: 6, y: 3 }];
+    const FORDS = [{ x: 4, y: 4 }];
+    const CROSSINGS = [...BRIDGES, ...FORDS];
 
     const baseUnits = [
       { type: 'Rytíř',     move: 3, attack: 3, range: 1, hp: 10, symbol: '⚔' },
       { type: 'Lučištník', move: 2, attack: 2, range: 2, hp: 6,  symbol: '🏹' },
-      { type: 'Kopinář',   move: 2, attack: 2, range: 1, hp: 8,  symbol: '🛡' },
+      { type: 'Pěšák',     move: 2, attack: 2, range: 1, hp: 8,  symbol: '🛡' },
       { type: 'Katapult',  move: 1, attack: 4, range: 3, hp: 6,  symbol: '💣' },
       { type: 'Kněz',      move: 2, attack: 0, range: 1, hp: 5,  symbol: '✝' }
     ];
@@ -699,7 +783,7 @@
         <line fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" x1="6" y1="12" x2="20" y2="12"/>
         <path fill="currentColor" d="M16 8.2 L20 12 L16 15.8 L17.2 12 Z"/>
       </svg>`,
-      'Kopinář': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+      'Pěšák': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <path fill="currentColor" d="M12 1.5L21.5 6.5V14c0 5.5-9.5 8.5-9.5 8.5S2.5 19.5 2.5 14V6.5L12 1.5z"/>
         <line fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2" stroke-linecap="round" x1="12" y1="7" x2="12" y2="18"/>
         <line fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2" stroke-linecap="round" x1="7.5" y1="12.5" x2="16.5" y2="12.5"/>
@@ -721,7 +805,7 @@
     const ABILITIES = {
       'Rytíř':     { icon: '⚡',  name: 'Nájezd',         desc: 'Pohyb +2 a okamžitý útok na cíl v dosahu.' },
       'Lučištník': { icon: '🎯', name: 'Přesná střela',  desc: 'Dvojitý dosah, ignoruje terénní obranu obránce.' },
-      'Kopinář':   { icon: '🛡️', name: 'Štítová zeď',    desc: '-2 poškození tento tah, nelze se pohybovat.' },
+      'Pěšák':     { icon: '🛡️', name: 'Štítová zeď',    desc: '-2 poškození tento tah, nelze se pohybovat.' },
       'Katapult':  { icon: '💥', name: 'Bombardování',   desc: 'AoE útok — vybrané pole + všichni sousedé.' },
       'Kněz':      { icon: '✝️', name: 'Zmrtvýchvstání', desc: 'Oživí poslední padlou spojeneckou jednotku s 3 HP. (1× za hru)' },
     };
@@ -733,7 +817,7 @@
     const NICKNAMES = {
       'Rytíř':     ['Rytíř smrti', 'Rudý rytíř', 'Železný rytíř', 'Temný rytíř'],
       'Lučištník': ['Stínový lučištník', 'Orlí oko', 'Nemilosrdný lučištník', 'Tichý lovec'],
-      'Kopinář':   ['Železný kopinář', 'Krvavá kopí', 'Neústupný kopinář', 'Strážce bran'],
+      'Pěšák':     ['Železný pěšák', 'Krvavé štíty', 'Neústupný pěšák', 'Strážce bran'],
       'Katapult':  ['Ničitel hradeb', 'Hromobití', 'Bouřlivý katapult', 'Hlas zkázy'],
       'Kněz':      ['Svatý léčitel', 'Věčný kněz', 'Kněz duší', 'Stínolamač'],
     };
@@ -745,6 +829,9 @@
     const unitStatus    = document.getElementById('unitStatus');
     const restartButton = document.getElementById('restartButton');
     const aiToggleBtn   = document.getElementById('aiToggle');
+    const aiDifficultyBtn = document.getElementById('aiDifficultyBtn');
+    const turnLimitBtn  = document.getElementById('turnLimitToggle');
+    const turnTimerEl   = document.getElementById('turnTimer');
     const musicToggleBtn= document.getElementById('musicToggle');
     const musicVolumeEl = document.getElementById('musicVolume');
     const contextMenu   = document.getElementById('contextMenu');
@@ -762,7 +849,7 @@
     ];
 
     let musicEnabled = true;
-    let musicUnlocked = false; // first user interaction unlocks browser audio
+    let musicUnlocked = true;
     let musicTargetVolume = 0.35;
     let musicCurrentMood = 'calm';
     let musicQueue = [];
@@ -793,11 +880,12 @@
       musicToggleBtn.textContent = musicEnabled ? '🔊' : '🔇';
     }
 
-    function fadeAudio(player, from, to, duration, done) {
+    function fadeAudio(player, from, toOrGetter, duration, done) {
       const startTime = performance.now();
       function tick(now) {
         const progress = Math.min(1, (now - startTime) / duration);
-        player.volume = from + (to - from) * progress;
+        const target = typeof toOrGetter === 'function' ? toOrGetter() : toOrGetter;
+        player.volume = from + (target - from) * progress;
         if (progress < 1) requestAnimationFrame(tick);
         else if (done) done();
       }
@@ -817,8 +905,8 @@
       to.volume = 0;
       to.play().catch(() => {});
 
-      fadeAudio(from, from.volume, 0, MUSIC_FADE_MS, () => from.pause());
-      fadeAudio(to, to.volume, musicEnabled ? musicTargetVolume : 0, MUSIC_FADE_MS);
+      fadeAudio(from, from.volume, () => 0, MUSIC_FADE_MS, () => from.pause());
+      fadeAudio(to, to.volume, () => (musicEnabled ? musicTargetVolume : 0), MUSIC_FADE_MS);
       musicActive = toIdx;
 
       to.onended = () => {
@@ -862,7 +950,6 @@
     }
 
     function unlockMusicOnce() {
-      if (musicUnlocked) return;
       musicUnlocked = true;
       ensureMusicPlaying();
       window.removeEventListener('pointerdown', unlockMusicOnce);
@@ -884,6 +971,7 @@
     let validAttacks = [];
     let validHeals = [];
     let aiEnabled = true;
+    let aiDifficulty = 'medium';
     let aiThinking = false;
     let turnTransition = false; // blocks input during 1s turn-end pause
 
@@ -906,13 +994,80 @@
     // ── Action log ───────────────────────────────────────────────────────────
     let actionLogEntries = [];
 
+    // ── AI + turn timer state ────────────────────────────────────────────────
+    const TURN_LIMIT_SECONDS = 60;
+    let turnLimitEnabled = false;
+    let turnSecondsLeft = TURN_LIMIT_SECONDS;
+    let turnTimerId = null;
+    let aiTurnTimeoutId = null;
+
     function pushLog(text) {
       actionLogEntries.push(text);
       if (actionLogEntries.length > 3) actionLogEntries.shift();
+      renderActionLog();
+    }
+
+    function renderActionLog() {
       const el = document.getElementById('actionLog');
       el.innerHTML = actionLogEntries.map((t, i) =>
         `<div class="log-entry${i === actionLogEntries.length - 1 ? ' log-newest' : ''}">${t}</div>`
       ).join('');
+    }
+
+    function isHumanTurn() {
+      return !(aiEnabled && currentPlayer === 2);
+    }
+
+    function updateTurnLimitButton() {
+      turnLimitBtn.textContent = `⏱ Časový limit: ${turnLimitEnabled ? 'Zapnuto' : 'Vypnuto'}`;
+    }
+
+    function updateAiDifficultyButton() {
+      const labels = { easy: 'Lehká', medium: 'Střední', hard: 'Těžká' };
+      aiDifficultyBtn.textContent = `AI obtížnost: ${labels[aiDifficulty]}`;
+    }
+
+    function updateTurnTimerUI() {
+      turnTimerEl.textContent = String(turnSecondsLeft);
+      turnTimerEl.classList.toggle('warning', turnLimitEnabled && turnSecondsLeft <= 10 && isHumanTurn());
+      turnTimerEl.style.opacity = turnLimitEnabled ? '1' : '0.45';
+    }
+
+    function stopTurnTimer() {
+      if (turnTimerId) {
+        clearInterval(turnTimerId);
+        turnTimerId = null;
+      }
+    }
+
+    function startTurnTimer(initialSeconds = TURN_LIMIT_SECONDS) {
+      stopTurnTimer();
+      turnSecondsLeft = initialSeconds;
+      updateTurnTimerUI();
+      if (!turnLimitEnabled || !isHumanTurn() || checkGameOver()) return;
+      turnTimerId = setInterval(() => {
+        turnSecondsLeft = Math.max(0, turnSecondsLeft - 1);
+        updateTurnTimerUI();
+        if (turnSecondsLeft > 0) return;
+        stopTurnTimer();
+        setMessage('⏱ Čas vypršel — tah byl automaticky ukončen.');
+        endTurn();
+      }, 1000);
+    }
+
+    function scheduleAiTurn(delayMs) {
+      if (aiTurnTimeoutId) clearTimeout(aiTurnTimeoutId);
+      aiTurnTimeoutId = setTimeout(() => {
+        aiTurnTimeoutId = null;
+        aiTurn();
+      }, delayMs);
+    }
+
+    function clearAiSchedule() {
+      if (aiTurnTimeoutId) {
+        clearTimeout(aiTurnTimeoutId);
+        aiTurnTimeoutId = null;
+      }
     }
 
     // ── Tooltip engine ───────────────────────────────────────────────────────
@@ -961,10 +1116,11 @@
       const defBonus    = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
       const castleBonus = ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
       const shieldBonus = defender.shieldWall ? 2 : 0;
+      const bridgePenalty = getTerrainAt(defender.x, defender.y) === 'Most' ? 1 : 0;
       const totalAtk    = baseAtk + atkBonus;
-      const totalDef    = defBonus + castleBonus + shieldBonus;
+      const totalDef    = Math.max(0, defBonus + castleBonus + shieldBonus - bridgePenalty);
       const damage      = Math.max(0, totalAtk - totalDef);
-      return { baseAtk, atkBonus, defBonus, castleBonus, shieldBonus, totalAtk, totalDef, damage };
+      return { baseAtk, atkBonus, defBonus, castleBonus, shieldBonus, bridgePenalty, totalAtk, totalDef, damage };
     }
 
     function buildAttackTooltipHtml(attacker, defender, ignoreTerrain = false) {
@@ -983,6 +1139,7 @@
       if (p.defBonus)    defMods.push(`<span style="color:#60c060">−${p.defBonus} les</span>`);
       if (p.castleBonus) defMods.push(`<span style="color:#a090c0">−${p.castleBonus} hrad</span>`);
       if (p.shieldBonus) defMods.push(`<span style="color:#6090c0">−${p.shieldBonus} štít</span>`);
+      if (p.bridgePenalty) defMods.push(`<span style="color:#e09060">+${p.bridgePenalty} most</span>`);
 
       const newHp   = Math.max(0, defender.hp - p.damage);
       const willDie = newHp === 0;
@@ -1000,12 +1157,31 @@
 
     // ── Turn-end banner ───────────────────────────────────────────────────────
     const turnEndBannerEl = document.getElementById('turnEndBanner');
+    let turnBannerHideTimer = null;
+    let turnBannerCallbackTimer = null;
+
+    function cancelTurnEndBanner() {
+      if (turnBannerHideTimer) {
+        clearTimeout(turnBannerHideTimer);
+        turnBannerHideTimer = null;
+      }
+      if (turnBannerCallbackTimer) {
+        clearTimeout(turnBannerCallbackTimer);
+        turnBannerCallbackTimer = null;
+      }
+      turnEndBannerEl.classList.remove('show');
+    }
 
     function showTurnEndBanner(callback) {
+      cancelTurnEndBanner();
       turnEndBannerEl.classList.add('show');
-      setTimeout(() => {
+      turnBannerHideTimer = setTimeout(() => {
+        turnBannerHideTimer = null;
         turnEndBannerEl.classList.remove('show');
-        setTimeout(callback, 180);
+        turnBannerCallbackTimer = setTimeout(() => {
+          turnBannerCallbackTimer = null;
+          callback();
+        }, 180);
       }, 1000);
     }
 
@@ -1084,6 +1260,9 @@
 
     // ── Game init ────────────────────────────────────────────────────────────
     function createGame() {
+      stopTurnTimer();
+      clearAiSchedule();
+      cancelTurnEndBanner();
       hexes = [];
       units = [];
       castles = [
@@ -1106,7 +1285,9 @@
       weatherTurnCounter = 0;
       actionLogEntries = [];
       attackReveal = new Map();
-      document.getElementById('actionLog').innerHTML = '';
+      turnSecondsLeft = TURN_LIMIT_SECONDS;
+      renderActionLog();
+      updateTurnTimerUI();
       updateWeatherUI();
       boardElement.innerHTML = '';
 
@@ -1122,7 +1303,7 @@
 
           const tile = document.createElement('div');
           tile.className = 'tile';
-          tile.dataset.terrain = terrainTypes[mapTemplate[y][x]];
+          tile.dataset.terrain = getTerrainAt(x, y);
           hex.appendChild(tile);
           rowEl.appendChild(hex);
           hexes.push({ x, y, el: hex, tile, unit: null });
@@ -1140,6 +1321,7 @@
       placeUnits();
       updateStatus();
       renderBoard();
+      startTurnTimer();
     }
 
     function placeUnits() {
@@ -1179,7 +1361,16 @@
     }
 
     function getHex(x, y)  { return hexes.find(cell => cell.x === x && cell.y === y); }
-    function getTerrainAt(x, y) { return terrainTypes[mapTemplate[y][x]]; }
+    function hasPoint(list, x, y) { return list.some(p => p.x === x && p.y === y); }
+    function isBridge(x, y) { return hasPoint(BRIDGES, x, y); }
+    function isFord(x, y) { return hasPoint(FORDS, x, y); }
+    function isRiver(x, y) { return hasPoint(RIVER_PATH, x, y) && !isBridge(x, y) && !isFord(x, y); }
+    function getTerrainAt(x, y) {
+      if (isBridge(x, y)) return 'Most';
+      if (isFord(x, y)) return 'Přebrod';
+      if (isRiver(x, y)) return 'Řeka';
+      return terrainTypes[mapTemplate[y][x]];
+    }
     function getCastleAt(x, y)  { return castles.find(c => c.x === x && c.y === y) || null; }
 
     function selectHex(x, y) {
@@ -1273,7 +1464,8 @@
       const defBonus   = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
       const castleBonus= ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
       const shieldBonus= defender.shieldWall ? 2 : 0;
-      const damage     = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus);
+      const bridgePenalty = getTerrainAt(defender.x, defender.y) === 'Most' ? 1 : 0;
+      const damage     = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus + bridgePenalty);
 
       flashTile(defender.x, defender.y);
       defender.hp = Math.max(0, defender.hp - damage);
@@ -1294,6 +1486,7 @@
       if (defBonus)      bonusInfo.push(`−${defBonus} les`);
       if (castleBonus)   bonusInfo.push(`−${castleBonus} hrad`);
       if (shieldBonus)   bonusInfo.push(`−${shieldBonus} štít`);
+      if (bridgePenalty) bonusInfo.push(`+${bridgePenalty} most`);
       if (ignoreTerrain) bonusInfo.push('🎯 přesná');
       const info = bonusInfo.length ? ` (${bonusInfo.join(', ')})` : '';
       const aName = attacker.nickname || attacker.type;
@@ -1381,6 +1574,7 @@
     }
 
     function endTurn() {
+      stopTurnTimer();
       validMoves   = [];
       validAttacks = [];
       validHeals   = [];
@@ -1430,30 +1624,98 @@
           turnTransition = false;
           if (currentPlayer === 2 && aiEnabled) {
             setMessage('AI přemýšlí…');
-            setTimeout(aiTurn, 400);
+            scheduleAiTurn(450);
+          } else {
+            startTurnTimer();
           }
         });
       } else {
         if (currentPlayer === 2 && aiEnabled) {
           aiThinking = true;
           setMessage('AI přemýšlí…');
-          setTimeout(aiTurn, 750);
+          scheduleAiTurn(750);
+        } else {
+          startTurnTimer();
         }
       }
     }
 
     function aiTurn() {
+      stopTurnTimer();
       aiThinking = false;
       if (checkGameOver()) return;
 
-      const aiUnits = units.filter(u => u.player === 2);
+      if (aiDifficulty === 'easy') { aiTurnEasy(); return; }
+      if (aiDifficulty === 'hard') { aiTurnHard(); return; }
+      aiTurnMedium();
+    }
 
+    function pickNearestEnemy(attacker, targets) {
+      if (!targets.length) return null;
+      return targets.reduce((best, enemy) =>
+        hexDistance(attacker, enemy) < hexDistance(attacker, best) ? enemy : best, targets[0]);
+    }
+
+    function moveUnitTowardTarget(unit, target, preferSafe = false) {
+      const moves = calculateMoveTargets(unit);
+      if (!moves.length) return false;
+      let candidates = moves;
+      if (preferSafe) {
+        const safer = moves.filter(m => {
+          const terr = getTerrainAt(m.x, m.y);
+          const dangerTile = currentWeather.id === 'boure' && terr === 'Kopec';
+          return !dangerTile;
+        });
+        if (safer.length) candidates = safer;
+      }
+      let best = candidates[0];
+      let bestDist = hexDistance(candidates[0], target);
+      candidates.forEach(mv => {
+        const d = hexDistance(mv, target);
+        if (d < bestDist) { bestDist = d; best = mv; }
+      });
+      const currentDist = hexDistance(unit, target);
+      if (bestDist >= currentDist && CROSSINGS.length) {
+        const nearestCrossing = CROSSINGS.reduce((bestCross, c) =>
+          hexDistance(unit, c) < hexDistance(unit, bestCross) ? c : bestCross, CROSSINGS[0]);
+        best = candidates.reduce((bestMv, mv) =>
+          hexDistance(mv, nearestCrossing) < hexDistance(bestMv, nearestCrossing) ? mv : bestMv, candidates[0]);
+      }
+      moveUnit(unit, best.x, best.y);
+      return true;
+    }
+
+    function aiTurnEasy() {
+      const aiUnits = units.filter(u => u.player === 2);
+      const enemies = units.filter(u => u.player === 1);
+      for (const unit of aiUnits) {
+        const attacks = calculateAttackTargets(unit);
+        if (attacks.length) {
+          const inRange = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
+          const nearest = pickNearestEnemy(unit, inRange);
+          if (nearest) {
+            performAttack(unit, nearest, true);
+            return;
+          }
+        }
+      }
+      const movable = aiUnits.filter(u => calculateMoveTargets(u).length > 0);
+      if (!movable.length) { endTurn(); return; }
+      const unit = movable[Math.floor(Math.random() * movable.length)];
+      const moves = calculateMoveTargets(unit);
+      const randMove = moves[Math.floor(Math.random() * moves.length)];
+      moveUnit(unit, randMove.x, randMove.y);
+    }
+
+    function aiTurnMedium() {
+      const aiUnits = units.filter(u => u.player === 2);
+      const enemies = units.filter(u => u.player === 1);
       if (aiUseAbilities(aiUnits)) return;
 
       for (const unit of aiUnits) {
         if (unit.type !== 'Kněz') continue;
         const heals = calculateHealTargets(unit);
-        if (heals.length > 0) {
+        if (heals.length) {
           const targets = units.filter(u => heals.some(h => h.x === u.x && h.y === u.y));
           targets.sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
           healUnit(unit, targets[0]);
@@ -1463,49 +1725,111 @@
 
       for (const unit of aiUnits) {
         const attacks = calculateAttackTargets(unit);
-        if (attacks.length > 0) {
-          const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
-          targets.sort((a, b) => {
-            const aLeg = a.rank === 3, bLeg = b.rank === 3;
-            if (aLeg !== bLeg) return aLeg ? 1 : -1;
-            return a.hp - b.hp;
-          });
-          performAttack(unit, targets[0]);
-          return;
+        if (!attacks.length) continue;
+        const targets = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
+        targets.sort((a, b) => a.hp - b.hp);
+        performAttack(unit, targets[0]);
+        return;
+      }
+
+      // Medium: defend own castle if enemy is near it.
+      const ownCastles = castles.filter(c => c.owner === 2);
+      for (const castle of ownCastles) {
+        const threat = enemies.find(e => hexDistance(e, castle) <= 2);
+        if (!threat) continue;
+        for (const unit of aiUnits) {
+          if (unit.type === 'Kněz') continue;
+          if (moveUnitTowardTarget(unit, castle, true)) return;
         }
       }
 
       const enemyCastles = castles.filter(c => c.owner !== 2);
-      if (enemyCastles.length > 0) {
+      if (enemyCastles.length) {
         for (const unit of aiUnits) {
           if (unit.type === 'Kněz') continue;
-          const moves  = calculateMoveTargets(unit);
           const target = enemyCastles.reduce((best, c) =>
             hexDistance(unit, c) < hexDistance(unit, best) ? c : best, enemyCastles[0]);
-          if (moves.some(m => m.x === target.x && m.y === target.y)) {
-            moveUnit(unit, target.x, target.y);
-            return;
-          }
+          if (moveUnitTowardTarget(unit, target, true)) return;
         }
       }
 
-      const enemies = units.filter(u => u.player === 1);
-      if (enemies.length === 0) return;
-
-      let bestUnit = null, bestMove = null, bestDist = Infinity;
+      if (!enemies.length) { endTurn(); return; }
       for (const unit of aiUnits) {
         if (unit.type === 'Katapult' || unit.type === 'Kněz') continue;
-        const moves = calculateMoveTargets(unit);
-        if (moves.length === 0) continue;
-        const nearestEnemy = enemies.reduce((best, e) =>
-          hexDistance(unit, e) < hexDistance(unit, best) ? e : best, enemies[0]);
-        for (const mv of moves) {
-          const d = hexDistance(mv, nearestEnemy);
-          if (d < bestDist) { bestDist = d; bestMove = mv; bestUnit = unit; }
+        const nearestEnemy = pickNearestEnemy(unit, enemies);
+        if (nearestEnemy && moveUnitTowardTarget(unit, nearestEnemy, true)) return;
+      }
+      endTurn();
+    }
+
+    function aiTurnHard() {
+      const aiUnits = units.filter(u => u.player === 2);
+      const enemies = units.filter(u => u.player === 1);
+      if (aiUseAbilities(aiUnits)) return;
+
+      // Hard: protect veteran units and avoid terrain disadvantages.
+      for (const unit of aiUnits.filter(u => u.rank >= 2)) {
+        const attacks = calculateAttackTargets(unit);
+        if (!attacks.length) continue;
+        const targets = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
+        const safeTargets = targets.filter(t => {
+          const terr = getTerrainAt(t.x, t.y);
+          return terr !== 'Les' && !getCastleAt(t.x, t.y);
+        });
+        const pool = safeTargets.length ? safeTargets : targets;
+        pool.sort((a, b) => a.hp - b.hp);
+        performAttack(unit, pool[0]);
+        return;
+      }
+
+      // Hard: focus on multi-target opportunities and high-value targets.
+      for (const unit of aiUnits) {
+        const attacks = calculateAttackTargets(unit);
+        if (!attacks.length) continue;
+        const targets = enemies.filter(e => attacks.some(a => a.x === e.x && a.y === e.y));
+        targets.sort((a, b) => (b.rank - a.rank) || (a.hp - b.hp));
+        performAttack(unit, targets[0]);
+        return;
+      }
+
+      // Hard: guard bridges when enemies approach crossings.
+      const threatenedBridge = BRIDGES.find(bridge =>
+        enemies.some(e => hexDistance(e, bridge) <= 2)
+      );
+      if (threatenedBridge) {
+        const guards = aiUnits
+          .filter(u => u.type !== 'Kněz')
+          .sort((a, b) =>
+            hexDistance(a, threatenedBridge) - hexDistance(b, threatenedBridge) ||
+            b.rank - a.rank || b.hp - a.hp
+          );
+        for (const guard of guards) {
+          if (guard.x === threatenedBridge.x && guard.y === threatenedBridge.y) break;
+          if (moveUnitTowardTarget(guard, threatenedBridge, true)) return;
         }
       }
-      if (bestUnit && bestMove) { moveUnit(bestUnit, bestMove.x, bestMove.y); return; }
 
+      const enemyCastles = castles.filter(c => c.owner !== 2);
+      if (enemyCastles.length) {
+        // Hard: prioritize castle capture with non-priest units first.
+        const attackers = aiUnits
+          .filter(u => u.type !== 'Kněz')
+          .sort((a, b) => b.rank - a.rank || b.hp - a.hp);
+        for (const unit of attackers) {
+          const target = enemyCastles.reduce((best, c) =>
+            hexDistance(unit, c) < hexDistance(unit, best) ? c : best, enemyCastles[0]);
+          if (moveUnitTowardTarget(unit, target, true)) return;
+        }
+      }
+
+      // Hard: fallback pressure on nearest enemy while preferring safer tiles.
+      if (!enemies.length) { endTurn(); return; }
+      const ordered = aiUnits.slice().sort((a, b) => b.rank - a.rank || b.hp - a.hp);
+      for (const unit of ordered) {
+        if (unit.type === 'Kněz') continue;
+        const nearestEnemy = pickNearestEnemy(unit, enemies);
+        if (nearestEnemy && moveUnitTowardTarget(unit, nearestEnemy, true)) return;
+      }
       endTurn();
     }
 
@@ -1523,28 +1847,36 @@
 
     function declareWinner(winner) {
       setMusicMood('victory');
+      stopTurnTimer();
+      clearAiSchedule();
+      cancelTurnEndBanner();
       turnText.textContent = `${winner} vyhrává!`;
       setMessage(`Konec hry. Vítěz: ${winner}.`);
     }
 
     function calculateMoveTargets(unit, customMove = null) {
       const effectiveMove = customMove !== null ? customMove : Math.max(1, unit.move + weatherMoveBonus());
-      const visited = new Set();
+      const bestCost = new Map();
       const targets = [];
       const queue   = [{ x: unit.x, y: unit.y, cost: 0 }];
       while (queue.length) {
         const current = queue.shift();
         const key = `${current.x},${current.y}`;
-        if (visited.has(key) || current.cost > effectiveMove) continue;
-        visited.add(key);
+        const known = bestCost.get(key);
+        if (known !== undefined && current.cost >= known) continue;
+        if (current.cost > effectiveMove) continue;
+        bestCost.set(key, current.cost);
         if (!(current.x === unit.x && current.y === unit.y) && !getHex(current.x, current.y).unit) {
           targets.push({ x: current.x, y: current.y });
         }
         neighbors(current.x, current.y).forEach(nb => {
-          const nextKey = `${nb.x},${nb.y}`;
-          if (visited.has(nextKey)) return;
           if (getHex(nb.x, nb.y).unit && !(nb.x === unit.x && nb.y === unit.y)) return;
-          if (current.cost + 1 <= effectiveMove) queue.push({ x: nb.x, y: nb.y, cost: current.cost + 1 });
+          if (isRiver(nb.x, nb.y)) return;
+          let stepCost = 1;
+          if (isBridge(nb.x, nb.y)) stepCost = 2;
+          if (isFord(nb.x, nb.y)) stepCost = Math.max(1, effectiveMove - current.cost);
+          const nextCost = current.cost + stepCost;
+          if (nextCost <= effectiveMove) queue.push({ x: nb.x, y: nb.y, cost: nextCost });
         });
       }
       return targets;
@@ -1580,7 +1912,7 @@
       switch (unit.type) {
         case 'Rytíř':     activateCharge(unit);        break;
         case 'Lučištník': activatePrecisionShot(unit); break;
-        case 'Kopinář':   activateShieldWall(unit);    break;
+        case 'Pěšák':     activateShieldWall(unit);    break;
         case 'Katapult':  activateBombardMode(unit);   break;
         case 'Kněz':      activateResurrection(unit);  break;
       }
@@ -1682,7 +2014,7 @@
       const dead = lastKilledFriendly[priest.player];
       if (!dead) { setMessage('Žádná padlá spojenecká jednotka!'); return; }
       const freeHex = neighbors(priest.x, priest.y)
-        .map(p => getHex(p.x, p.y)).find(h => h && !h.unit);
+        .map(p => getHex(p.x, p.y)).find(h => h && !h.unit && !isRiver(h.x, h.y));
       if (!freeHex) { setMessage('Není volné sousední pole pro oživení!'); return; }
       const revived = {
         ...dead, id: `${priest.player}-rev-${Date.now()}`,
@@ -1763,7 +2095,7 @@
         }
       }
       for (const u of aiUnits) {
-        if (u.type !== 'Kopinář' || u.abilityUsed) continue;
+        if (u.type !== 'Pěšák' || u.abilityUsed) continue;
         if (u.hp < u.maxHp * 0.4) { activateShieldWall(u); return true; }
       }
       return false;
@@ -2047,6 +2379,19 @@
     aiToggleBtn.addEventListener('click', () => {
       aiEnabled = !aiEnabled;
       aiToggleBtn.textContent = `AI: ${aiEnabled ? 'Zapnuto' : 'Vypnuto'}`;
+      startTurnTimer(turnSecondsLeft);
+    });
+
+    aiDifficultyBtn.addEventListener('click', () => {
+      aiDifficulty = aiDifficulty === 'easy' ? 'medium' : aiDifficulty === 'medium' ? 'hard' : 'easy';
+      updateAiDifficultyButton();
+      setMessage(`Obtížnost AI: ${aiDifficulty === 'easy' ? 'Lehká' : aiDifficulty === 'medium' ? 'Střední' : 'Těžká'}.`);
+    });
+
+    turnLimitBtn.addEventListener('click', () => {
+      turnLimitEnabled = !turnLimitEnabled;
+      updateTurnLimitButton();
+      startTurnTimer(turnLimitEnabled ? TURN_LIMIT_SECONDS : turnSecondsLeft);
     });
 
     musicToggleBtn.addEventListener('click', () => setMusicEnabled(!musicEnabled));
@@ -2111,6 +2456,10 @@
 
     setMusicButtonState();
     setMusicVolume(Number(musicVolumeEl.value) / 100);
+    ensureMusicPlaying();
+    updateTurnLimitButton();
+    updateAiDifficultyButton();
+    updateTurnTimerUI();
     createGame();
   </script>
 </body>
