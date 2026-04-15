@@ -21,9 +21,11 @@
     }
 
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
       margin: 0;
-      min-height: 100vh;
+      height: 100%;
+      overflow: hidden;
       background:
         radial-gradient(circle at top, #4d523c 0%, #1b1915 55%),
         repeating-linear-gradient(0deg,   transparent 0, transparent 49px, rgba(0,0,0,0.07) 49px, rgba(0,0,0,0.07) 50px),
@@ -32,7 +34,6 @@
       color: var(--text);
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     }
-    /* Parallax overlay — moves at 15% of scroll speed */
     body::before {
       content: '';
       position: fixed;
@@ -40,338 +41,493 @@
       background:
         radial-gradient(ellipse at 20% 10%, rgba(180,140,60,0.07) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 80%, rgba(60,80,120,0.08) 0%, transparent 50%);
-      transform: translateY(calc(var(--parallax-y, 0px) * -0.15));
       pointer-events: none;
       z-index: 0;
     }
-    main {
+
+    /* ── 3-column layout ─────────────────────────────────────────────────── */
+    .game-layout {
       position: relative;
       z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
     }
-    header {
-      text-align: center;
-      margin-bottom: 16px;
-    }
-    h1 {
-      margin: 0;
-      font-family: 'Cinzel Decorative', 'Cinzel', serif;
-      font-size: clamp(1.7rem, 3vw, 2.8rem);
-      letter-spacing: 0.04em;
-      text-shadow: 0 2px 16px rgba(191,163,74,0.25), 0 1px 0 rgba(0,0,0,.5);
-    }
-    p { margin: 8px 0 0; color: #d7c9ae; }
 
-    .status {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin: 18px 0 24px;
+    /* ── Side panels ── */
+    .side-panel {
+      background: rgba(20, 18, 15, 0.97);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
     }
-    .panel {
-      background: rgba(30, 28, 24, 0.92);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 14px 35px var(--shadow);
+
+    .left-panel {
+      width: 200px;
+      padding: 14px 12px;
+      border-right: 1px solid rgba(255,255,255,0.07);
     }
-    .panel strong { display: block; margin-bottom: 8px; color: var(--highlight); font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
-    .panel button {
-      margin-top: 12px;
+
+    .right-panel {
+      width: 220px;
+      border-left: 1px solid rgba(255,255,255,0.07);
+      overflow-y: auto;
+    }
+
+    /* ── Map center ── */
+    .map-center {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 16px 10px;
+    }
+
+    /* ── Left panel ── */
+    .lp-label {
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      color: var(--highlight);
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .lp-section {
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    #turnText {
+      font-size: 0.92rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+
+    #message {
+      font-size: 0.75rem;
+      color: #d7c9ae;
+      line-height: 1.45;
+    }
+
+    /* weather row in left panel */
+    .lp-weather {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .lp-weather .w-icon  { font-size: 1.35rem; line-height: 1; flex-shrink: 0; }
+    .lp-weather .w-name  { font-weight: 700; font-size: 0.82rem; color: var(--highlight); }
+    .lp-weather .w-desc  { font-size: 0.67rem; color: #b7ae9f; margin-top: 2px; }
+    .lp-weather .w-timer { font-size: 0.62rem; color: #9a9080; margin-top: 1px; }
+
+    /* action log */
+    .lp-log { flex: 1; min-height: 0; overflow: hidden; }
+    #actionLog { overflow: hidden; }
+    .log-entry {
+      font-size: 0.7rem;
+      color: #b7ae9f;
+      line-height: 1.4;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry.log-newest { color: #e8dcc8; }
+
+    /* bottom buttons */
+    .lp-bottom {
+      margin-top: auto;
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .lp-bottom button {
       width: 100%;
       border: none;
       background: var(--highlight);
       color: #1b1915;
-      padding: 10px 14px;
+      padding: 9px 8px;
       border-radius: 10px;
       cursor: pointer;
       font-weight: 700;
+      font-size: 0.8rem;
+      font-family: inherit;
+      transition: filter 0.15s;
     }
-    .panel button:hover { filter: brightness(1.05); }
+    .lp-bottom button:hover { filter: brightness(1.08); }
+    .lp-bottom button.btn-ghost {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .lp-bottom button.btn-ghost:hover { background: rgba(255,255,255,0.12); }
 
-    .board {
-      display: grid;
-      grid-template-columns: repeat(9, minmax(0, 1fr));
-      justify-items: center;
-      gap: var(--grid-gap);
-      padding-bottom: 20px;
+    /* ── Right panel ── */
+    .weather-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 13px;
+      background: rgba(28,25,20,0.98);
+      border-bottom: 1px solid rgba(255,255,255,0.09);
+      flex-shrink: 0;
     }
-    .row-offset { margin-left: calc(40px + var(--grid-gap) / 2); }
+    .weather-badge .w-icon  { font-size: 1.55rem; line-height: 1; flex-shrink: 0; }
+    .weather-badge .w-name  { font-weight: 700; font-size: 0.88rem; color: var(--highlight); }
+    .weather-badge .w-timer { font-size: 0.65rem; color: #9a9080; margin-top: 2px; }
+    .weather-badge .w-desc  { font-size: 0.65rem; color: #b7ae9f; margin-top: 1px; }
+
+    .unit-list { padding: 8px 10px 14px; }
+
+    .unit-list-hdr {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      color: var(--highlight);
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      padding: 8px 0 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 7px;
+    }
+    .unit-list-hdr:first-child { padding-top: 0; }
+
+    .unit-row { margin-bottom: 9px; }
+    .unit-row-top {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 3px;
+    }
+    .ur-icon   { font-size: 0.82rem; flex-shrink: 0; }
+    .ur-name   {
+      font-size: 0.76rem;
+      font-weight: 600;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ur-kills  { font-size: 0.62rem; color: #9a9080; flex-shrink: 0; }
+    .ur-stars  { font-size: 0.62rem; flex-shrink: 0; }
+
+    .hp-bar-row { display: flex; align-items: center; gap: 5px; }
+    .hp-bar-bg  {
+      flex: 1;
+      height: 5px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .hp-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .hp-bar-fill.p1 { background: linear-gradient(90deg, #8b6f48, #d9be83); }
+    .hp-bar-fill.p2 { background: linear-gradient(90deg, #3a5f87, #739cc6); }
+    .hp-bar-txt { font-size: 0.62rem; color: #9a9080; white-space: nowrap; }
+
+    /* ── Board — proper hex grid ── */
+    .board {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    /* Rows overlap by 25 % of hex height for correct hex tiling */
+    .hex-row     { display: flex; flex-direction: row; margin-bottom: -25px; }
+    .hex-row-odd { margin-left: 43px; }
+
     .hex {
       position: relative;
-      width: 80px;
-      height: 92px;
+      width: 86px;
+      height: 99px;
       cursor: pointer;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      flex-shrink: 0;
+      transition: transform 0.18s ease;
     }
-    .hex:hover { transform: translateY(-4px); }
-    .hex::before,
-    .hex::after {
-      content: "";
-      position: absolute;
-      width: 0;
-      border-left: 40px solid transparent;
-      border-right: 40px solid transparent;
-    }
-    .hex::before {
-      bottom: 100%;
-      border-bottom: 20px solid;
-      border-bottom-color: inherit;
-    }
-    .hex::after {
-      top: 100%;
-      border-top: 20px solid;
-      border-top-color: inherit;
-    }
+    .hex:hover { transform: translateY(-5px); }
+
+    /* ── True hexagonal tile via clip-path (pointy-top, 3 % inset gap) ── */
     .tile {
-      width: 100%;
-      height: 100%;
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-      border: 2px solid rgba(255,255,255,0.08);
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 8px;
-      color: var(--text);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-    }
-    .tile::before {
-      content: attr(data-terrain);
       position: absolute;
-      top: 8px;
-      left: 8px;
-      font-size: 0.7rem;
-      opacity: 0.7;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      inset: 0;
+      clip-path: polygon(50% 3%, 97% 26%, 97% 74%, 50% 97%, 3% 74%, 3% 26%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      transition: filter 0.18s ease;
     }
+    /* Overlay tint — clipped to hex shape by parent clip-path */
+    .tile::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transition: background 0.16s;
+    }
+
     /* ── Terrain textures ── */
+
+    /* Pole — light green with repeating grass-dot pattern */
     .tile[data-terrain="Pole"] {
-      background-color: #49502e;
+      background-color: #5e8c30;
+      background-image:
+        radial-gradient(circle, rgba(0,50,0,0.3) 1.5px, transparent 1.5px),
+        radial-gradient(circle, rgba(130,190,40,0.18) 1px, transparent 1px);
+      background-size: 11px 11px, 17px 17px;
+      background-position: 0 0, 5px 6px;
+    }
+
+    /* Les — dark green with tiled SVG pine trees */
+    .tile[data-terrain="Les"] {
+      background-color: #1e3d18;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='30'%3E%3Cpolygon points='13,1 25,13 1,13' fill='%23174d17' opacity='0.9'/%3E%3Cpolygon points='13,7 24,18 2,18' fill='%23258025' opacity='0.8'/%3E%3Crect x='11' y='18' width='4' height='8' fill='%236b3e14' opacity='0.75'/%3E%3C/svg%3E");
+      background-size: 26px 30px;
+      background-repeat: repeat;
+    }
+
+    /* Kopec — warm brown with diagonal slope striping */
+    .tile[data-terrain="Kopec"] {
+      background-color: #8a6540;
       background-image:
         repeating-linear-gradient(
-          90deg, transparent 0, transparent 10px,
-          rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 11px
+          -40deg,
+          transparent 0, transparent 5px,
+          rgba(255,255,255,0.07) 5px, rgba(255,255,255,0.07) 6px
         ),
         repeating-linear-gradient(
-          0deg, transparent 0, transparent 14px,
-          rgba(0,0,0,0.06) 14px, rgba(0,0,0,0.06) 15px
+          -40deg,
+          transparent 0, transparent 13px,
+          rgba(0,0,0,0.1) 13px, rgba(0,0,0,0.1) 14px
+        ),
+        linear-gradient(160deg, rgba(255,255,255,0.1) 0%, transparent 55%);
+    }
+
+    /* Hrad — cool stone grey with masonry brick grid */
+    .tile[data-terrain="Hrad"] {
+      background-color: #5c5568;
+      background-image:
+        repeating-linear-gradient(
+          0deg, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.2) 1px,
+          transparent 1px, transparent 14px
+        ),
+        repeating-linear-gradient(
+          90deg, rgba(0,0,0,0.14) 0, rgba(0,0,0,0.14) 1px,
+          transparent 1px, transparent 14px
+        ),
+        repeating-linear-gradient(
+          0deg, transparent 7px,
+          rgba(255,255,255,0.04) 7px, rgba(255,255,255,0.04) 8px,
+          transparent 8px
         );
     }
-    .tile[data-terrain="Les"] {
-      background-color: #273620;
-      background-image:
-        radial-gradient(circle at 22% 30%, rgba(0,0,0,0.4)  2px, transparent 2px),
-        radial-gradient(circle at 68% 22%, rgba(0,0,0,0.3)  2px, transparent 2px),
-        radial-gradient(circle at 45% 65%, rgba(0,0,0,0.35) 2px, transparent 2px),
-        radial-gradient(circle at 80% 70%, rgba(0,0,0,0.25) 2px, transparent 2px),
-        radial-gradient(circle at 15% 75%, rgba(0,0,0,0.2)  2px, transparent 2px),
-        linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+
+    /* ── Highlights ── */
+    @keyframes pulse-gold {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(245,221,90,0.8))  drop-shadow(0 0 2px rgba(245,221,90,0.5)); }
+      50%       { filter: drop-shadow(0 0 16px rgba(245,221,90,1))   drop-shadow(0 0 7px rgba(245,221,90,0.85)); }
     }
-    .tile[data-terrain="Kopec"] {
-      background-color: #6a5238;
-      background-image:
-        repeating-linear-gradient(
-          -35deg, transparent 0, transparent 5px,
-          rgba(255,255,255,0.055) 5px, rgba(255,255,255,0.055) 6px
-        ),
-        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 70%);
+    /* Selected unit — pulsing gold glow */
+    .tile.highlight {
+      animation: pulse-gold 1.4s ease-in-out infinite;
     }
-    .tile[data-terrain="Hrad"] {
-      background-color: #3e3849;
-      background-image:
-        repeating-linear-gradient(
-          0deg, transparent 0, transparent 8px,
-          rgba(0,0,0,0.18) 8px, rgba(0,0,0,0.18) 9px
-        ),
-        repeating-linear-gradient(
-          90deg, transparent 0, transparent 13px,
-          rgba(0,0,0,0.12) 13px, rgba(0,0,0,0.12) 14px
-        ),
-        linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 60%);
-    }
-    .tile.highlight { border-color: #f5dd7a; box-shadow: 0 0 0 4px rgba(191,163,74,0.55); }
+    .tile.highlight::after     { background: rgba(245,221,90,0.3); }
+
+    /* Move targets — solid green overlay, visible through terrain */
     .tile.move-target {
-      border-color: #7bb26b;
-      box-shadow: 0 0 0 4px rgba(122, 178, 107, 0.5);
-      background-color: rgba(122, 178, 107, 0.22) !important;
+      filter: drop-shadow(0 0 7px rgba(0,255,100,0.75));
     }
+    .tile.move-target::after   { background: rgba(0,255,100,0.35); }
+
+    /* Attack targets — solid red overlay */
     .tile.attack-target {
-      border-color: #c65a47;
-      box-shadow: 0 0 0 4px rgba(198, 90, 71, 0.5);
-      background-color: rgba(198, 90, 71, 0.2) !important;
+      filter: drop-shadow(0 0 8px rgba(255,50,50,0.85));
     }
+    .tile.attack-target::after { background: rgba(255,50,50,0.4); }
+
+    /* Heal targets */
     .tile.heal-target {
-      border-color: #5ba8c9;
-      box-shadow: 0 0 0 4px rgba(91, 168, 201, 0.55);
-      background-color: rgba(91, 168, 201, 0.2) !important;
+      filter: drop-shadow(0 0 7px rgba(80,168,210,0.9)) drop-shadow(0 0 2px rgba(80,168,210,0.5));
     }
+    .tile.heal-target::after   { background: rgba(80,168,210,0.28); }
+
+    /* ── Attack-reveal: enemy that struck from fog ── */
+    @keyframes pulse-red {
+      0%, 100% { filter: drop-shadow(0 0 4px rgba(220,40,40,0.7)); }
+      50%       { filter: drop-shadow(0 0 14px rgba(255,50,50,1)) drop-shadow(0 0 5px rgba(255,50,50,0.7)); }
+    }
+    .tile.attack-reveal {
+      animation: pulse-red 1.2s ease-in-out infinite;
+    }
+    .tile.attack-reveal::after { background: rgba(255,50,50,0.22); }
+
     .castle-marker {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      font-size: 1rem;
+      top: 9px;
+      right: 12px;
+      font-size: 1.1rem;
       line-height: 1;
-      filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,.8));
       pointer-events: none;
+      z-index: 3;
     }
-    .castle-marker.owner-1 { text-shadow: 0 0 8px #d9be83; }
-    .castle-marker.owner-2 { text-shadow: 0 0 8px #739cc6; }
+    .castle-marker.owner-1 { text-shadow: 0 0 10px #d9be83; }
+    .castle-marker.owner-2 { text-shadow: 0 0 10px #739cc6; }
 
     /* ── Fog of War ── */
-    .hex.fog-hidden  { pointer-events: none; }
-    .hex.fog-hidden .tile  { filter: brightness(0.07); }
+    .hex.fog-hidden   { pointer-events: none; }
+    .hex.fog-hidden .tile   { filter: brightness(0.07); }
     .hex.fog-explored { pointer-events: none; }
-    .hex.fog-explored .tile {
-      filter: grayscale(1) brightness(0.42);
-      transition: filter 0.3s;
-    }
-    .unit.ghost {
-      opacity: 0.3;
-      filter: grayscale(1);
-    }
+    .hex.fog-explored .tile { filter: grayscale(1) brightness(0.42); transition: filter 0.3s; }
+    .unit.ghost { opacity: 0.3; filter: grayscale(1); }
+
     @keyframes attack-flash {
-      0%   { background-color: rgba(198, 90, 71, 0); }
-      18%  { background-color: rgba(198, 90, 71, 0.88); box-shadow: 0 0 0 8px rgba(198,90,71,0.55); }
-      100% { background-color: rgba(198, 90, 71, 0); box-shadow: none; }
+      0%   { filter: none; }
+      18%  { filter: drop-shadow(0 0 14px rgba(220,70,50,0.95)) brightness(1.5); }
+      100% { filter: none; }
     }
     @keyframes tile-shake {
       0%, 100% { transform: translateX(0); }
       18%      { transform: translateX(-7px); }
-      36%      { transform: translateX(7px); }
+      36%      { transform: translateX( 7px); }
       54%      { transform: translateX(-5px); }
-      72%      { transform: translateX(5px); }
+      72%      { transform: translateX( 5px); }
       90%      { transform: translateX(-2px); }
     }
     .tile.flash-hit  { animation: attack-flash 0.5s ease-out forwards; }
     .tile.tile-shake { animation: tile-shake  0.38s ease-out forwards; }
 
+    /* ── Unit on map ── */
     .unit {
       position: relative;
-      width: 56px;
-      height: 56px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       display: grid;
       place-items: center;
-      font-size: 0.95rem;
       font-weight: 800;
-      text-shadow: 0 1px 2px rgba(0,0,0,.45);
-      border: 2px solid rgba(255,255,255,0.15);
-      box-shadow: inset 0 0 0 2px rgba(0,0,0,.16), 0 12px 26px rgba(0,0,0,.25);
+      text-shadow: 0 1px 3px rgba(0,0,0,.6);
+      border: 3px solid rgba(255,255,255,0.28);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
+      z-index: 2;
     }
+    /* Veteran stars — small badge bottom-left corner */
     .unit-stars {
       position: absolute;
-      top: -11px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.52rem;
+      bottom: -1px;
+      left: -1px;
+      font-size: 0.4rem;
       line-height: 1;
-      white-space: nowrap;
-      filter: drop-shadow(0 0 3px rgba(0,0,0,.9));
+      background: rgba(0,0,0,0.78);
+      border-radius: 4px;
+      padding: 1px 2px;
       pointer-events: none;
     }
     .unit.rank-legend {
-      box-shadow: inset 0 0 0 2px rgba(0,0,0,.16), 0 12px 26px rgba(0,0,0,.25),
-                  0 0 0 3px rgba(255,215,0,0.55), 0 0 14px rgba(255,180,0,0.35);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18),
+                  0 0 0 3px rgba(255,215,0,0.65), 0 0 18px rgba(255,185,0,0.45);
     }
-    .unit.player1 { background: linear-gradient(135deg, #8b6f48, #d9be83); color: #1b1210; }
-    .unit.player2 { background: linear-gradient(135deg, #3a5f87, #739cc6); color: #f9f6ef; }
-    .unit span {
+    .unit.player1 { background: linear-gradient(135deg, #7a5e36, #dfc47a); color: #1a0f05; }
+    .unit.player2 { background: linear-gradient(135deg, #2e4f78, #6a9fd4); color: #f0f5ff; }
+    /* HP number badge */
+    .unit .hp-badge {
       position: absolute;
-      bottom: -4px;
-      right: -4px;
-      background: rgba(20,20,20,0.9);
-      color: #fff;
+      bottom: -5px;
+      right: -5px;
+      background: rgba(15,12,10,0.92);
+      color: #f5f1e8;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 22px;
+      height: 22px;
       display: grid;
       place-items: center;
-      font-size: 0.75rem;
-    }
-    .tooltip {
-      font-size: 0.9rem;
-      padding: 10px 12px;
-      background: rgba(22,20,18,0.95);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 13px;
-    }
-    .footer {
-      margin-top: 16px;
-      color: #b7ae9f;
-      text-align: center;
-      font-size: 0.92rem;
-    }
-
-    /* ── Ability bar ── */
-    .ability-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 18px;
-      margin: 10px 0;
-      background: rgba(28,25,20,0.94);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 14px;
-      flex-wrap: wrap;
-    }
-    .ability-bar.hidden { display: none; }
-    .ability-bar .ab-label { font-size: 0.82rem; color: #9a9080; white-space: nowrap; }
-    .ability-bar .ab-hint  { font-size: 0.8rem; color: #b7ae9f; flex: 1; }
-    .ability-btn {
-      border: none;
-      background: linear-gradient(135deg, #c8992a, #f0c040);
-      color: #1b1210;
-      padding: 8px 18px;
-      border-radius: 10px;
-      cursor: pointer;
+      font-size: 0.72rem;
       font-weight: 700;
-      font-size: 0.92rem;
-      white-space: nowrap;
-      transition: filter 0.15s, opacity 0.15s;
-    }
-    .ability-btn:hover:not(:disabled) { filter: brightness(1.12); }
-    .ability-btn:disabled {
-      background: #3a3530;
-      color: #6a6058;
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
-    .ability-btn.active-mode {
-      background: linear-gradient(135deg, #4a7ab2, #80b8f0);
-      animation: pulse-blue 1s ease-in-out infinite alternate;
-    }
-    @keyframes pulse-blue {
-      from { box-shadow: 0 0 0 2px rgba(74,122,178,0.3); }
-      to   { box-shadow: 0 0 0 6px rgba(74,122,178,0.0); }
+      border: 1px solid rgba(255,255,255,0.12);
     }
 
-    /* ── Weather ── */
-    .board-container { position: relative; }
-    .weather-badge {
-      position: absolute;
-      top: -6px;
-      right: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(28,25,20,0.94);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 14px;
-      padding: 8px 16px;
-      z-index: 10;
-      backdrop-filter: blur(4px);
+    /* ── Context menu ── */
+    .context-menu {
+      position: fixed;
+      z-index: 1000;
+      background: rgba(22,20,18,0.98);
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 11px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      overflow: hidden;
+      min-width: 180px;
     }
-    .weather-badge .w-icon { font-size: 1.7rem; line-height: 1; }
-    .weather-badge .w-name { font-weight: 700; font-size: 0.95rem; color: var(--highlight); }
-    .weather-badge .w-timer { font-size: 0.72rem; color: #9a9080; margin-top: 2px; }
-    .weather-badge .w-desc  { font-size: 0.72rem; color: #b7ae9f; margin-top: 1px; max-width: 160px; }
+    .context-menu.hidden { display: none; }
+    .ctx-item {
+      padding: 10px 15px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: background 0.12s;
+      user-select: none;
+    }
+    .ctx-item:hover { background: rgba(255,255,255,0.08); }
+    .ctx-item + .ctx-item { border-top: 1px solid rgba(255,255,255,0.06); }
+    .ctx-item.ctx-ability { color: #f0c040; }
+    .ctx-item.ctx-ability:hover { background: rgba(240,192,64,0.1); }
+    .ctx-item.ctx-ability.disabled { color: #6a6058; cursor: not-allowed; }
+    .ctx-item.ctx-ability.disabled:hover { background: transparent; }
 
+    /* ── Game tooltip ── */
+    #gameTooltip {
+      position: fixed;
+      z-index: 2000;
+      background: rgba(14,12,10,0.97);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 11px;
+      padding: 11px 15px;
+      max-width: 248px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #f5f1e8;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.65);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.14s;
+    }
+    #gameTooltip.show { opacity: 1; }
+    .tt-title { font-weight: 700; color: #f0c040; margin-bottom: 5px; font-size: 0.84rem; }
+    .tt-desc  { color: #d7c9ae; }
+    .tt-cd    { margin-top: 5px; font-size: 0.73rem; color: #9a9080; }
+    .tt-sep   { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 7px 0; }
+    .tt-row   { font-size: 0.78rem; margin: 1px 0; }
+    .tt-key   { color: #9a9080; }
+    .tt-dmg   { margin-top: 5px; font-size: 0.84rem; }
+    .tt-dmg strong { color: #f0c040; font-size: 0.92rem; }
+
+    /* ── Turn-end banner ── */
+    #turnEndBanner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.88);
+      background: rgba(10,8,6,0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 12px 40px;
+      font-size: 1.1rem;
+      letter-spacing: 0.07em;
+      color: rgba(245,241,232,0.62);
+      pointer-events: none;
+      z-index: 250;
+      opacity: 0;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    #turnEndBanner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    /* ── Weather announce overlay ── */
     .weather-overlay {
       position: fixed;
       inset: 0;
@@ -396,34 +552,52 @@
       text-shadow: 0 2px 12px rgba(0,0,0,.6);
       letter-spacing: 0.02em;
     }
-    .weather-announce.show {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
+    .weather-announce.show { opacity: 1; transform: scale(1) translateY(0); }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Středověká tahová strategie</h1>
-      <p>9×9 hex mapa, dva hráči, rytíř, lučištník a kopinář. Vyhraj ten, kdo zůstane poslední.</p>
-    </header>
+  <div class="game-layout">
 
-    <div class="status">
-      <div class="panel">
-        <strong>Aktuální tah</strong>
+    <!-- ── Left panel ── -->
+    <aside class="side-panel left-panel">
+      <div class="lp-section">
+        <span class="lp-label">Aktuální tah</span>
         <div id="turnText">Hráč 1 (žlutý)</div>
-        <div class="tooltip" id="message">Vyber svou jednotku a poté cíl.</div>
+        <div id="message">Vyber svou jednotku a poté cíl.</div>
       </div>
-      <div class="panel">
-        <strong>Jednotky</strong>
-        <div id="unitStatus"></div>
+
+      <div class="lp-section">
+        <span class="lp-label">Počasí</span>
+        <div class="lp-weather">
+          <div class="w-icon" id="wIconL">☀️</div>
+          <div>
+            <div class="w-name" id="wNameL">Jasno</div>
+            <div class="w-desc" id="wDescL">Žádné efekty.</div>
+            <div class="w-timer" id="wTimerL">Za 5 tahů se změní</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-section lp-log">
+        <span class="lp-label">Poslední akce</span>
+        <div id="actionLog"></div>
+      </div>
+
+      <div class="lp-bottom">
         <button id="aiToggle">AI: Zapnuto</button>
-        <button id="restartButton">Restartovat hru</button>
+        <button id="restartButton" class="btn-ghost">Restartovat hru</button>
+      </div>
+    </aside>
+
+    <!-- ── Center: map ── -->
+    <div class="map-center">
+      <div class="board-container">
+        <div id="board" class="board"></div>
       </div>
     </div>
 
-    <div class="board-container">
+    <!-- ── Right panel ── -->
+    <aside class="side-panel right-panel">
       <div class="weather-badge" id="weatherBadge">
         <div class="w-icon" id="wIcon">☀️</div>
         <div>
@@ -432,21 +606,26 @@
           <div class="w-timer" id="wTimer">Za 5 tahů se změní</div>
         </div>
       </div>
-      <div id="board" class="board"></div>
-    </div>
+      <div class="unit-list" id="unitStatus"></div>
+    </aside>
+  </div>
 
-    <div id="abilityBar" class="ability-bar hidden">
-      <span class="ab-label">Schopnost:</span>
-      <button id="abilityBtn" class="ability-btn" disabled></button>
-      <span class="ab-hint" id="abilityHint"></span>
-    </div>
+  <!-- ── Context menu ── -->
+  <div id="contextMenu" class="context-menu hidden">
+    <div id="ctxMoveAttack" class="ctx-item">⚔️ Pohyb / Útok</div>
+    <div id="ctxAbility" class="ctx-item ctx-ability">✨ Použít schopnost</div>
+  </div>
 
-    <div class="weather-overlay" id="weatherOverlay">
-      <div class="weather-announce" id="weatherAnnounce"></div>
-    </div>
+  <!-- ── Weather announce overlay ── -->
+  <div class="weather-overlay" id="weatherOverlay">
+    <div class="weather-announce" id="weatherAnnounce"></div>
+  </div>
 
-    <div class="footer">Středověká tahová strategie — počasí, mlha, hrady a AI protivník.</div>
-  </main>
+  <!-- ── Turn-end banner ── -->
+  <div id="turnEndBanner">Tah končí…</div>
+
+  <!-- ── Game tooltip ── -->
+  <div id="gameTooltip"></div>
 
   <script>
     const terrainTypes = ["Pole", "Les", "Kopec", "Hrad"];
@@ -485,54 +664,53 @@
       boure:    '⛈️ Přichází bouře!',
       slunecno: '🌞 Vychází sluníčko!',
     };
-    const WEATHER_CHANGE_INTERVAL = 5; // po tolika tazích hráče 1
+    const WEATHER_CHANGE_INTERVAL = 5;
 
     // ── SVG unit icons ───────────────────────────────────────────────────────
     const UNIT_SVGS = {
-      'Rytíř': `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+      'Rytíř': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <path fill="currentColor" d="M12 2C7.8 2 4 6 4 11v4h16v-4C20 6 16.2 2 12 2z"/>
         <rect fill="currentColor" x="5.5" y="13" width="13" height="2" rx="1"/>
         <path fill="currentColor" opacity=".72" d="M7 15h10v3.5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V15z"/>
         <rect fill="currentColor" opacity=".38" x="8" y="8.5" width="8" height="1.5" rx=".75"/>
       </svg>`,
-      'Lučištník': `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+      'Lučištník': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M6 2.5 Q2.5 12 6 21.5"/>
         <line fill="none" stroke="currentColor" stroke-width=".8" opacity=".55" x1="6" y1="2.5" x2="6" y2="21.5"/>
         <line fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" x1="6" y1="12" x2="20" y2="12"/>
         <path fill="currentColor" d="M16 8.2 L20 12 L16 15.8 L17.2 12 Z"/>
       </svg>`,
-      'Kopinář': `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+      'Kopinář': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <path fill="currentColor" d="M12 1.5L21.5 6.5V14c0 5.5-9.5 8.5-9.5 8.5S2.5 19.5 2.5 14V6.5L12 1.5z"/>
         <line fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2" stroke-linecap="round" x1="12" y1="7" x2="12" y2="18"/>
         <line fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2" stroke-linecap="round" x1="7.5" y1="12.5" x2="16.5" y2="12.5"/>
       </svg>`,
-      'Katapult': `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+      'Katapult': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <circle fill="none" stroke="currentColor" stroke-width="2" cx="5.5" cy="19" r="3.5"/>
         <line fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" x1="5.5" y1="15.5" x2="16" y2="6"/>
         <circle fill="currentColor" cx="18" cy="4.5" r="3.2"/>
         <line fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="1.5" y1="19" x2="21" y2="19"/>
       </svg>`,
-      'Kněz': `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+      'Kněz': `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
         <circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="5" r="4"/>
         <line fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" x1="12" y1="9" x2="12" y2="22"/>
         <line fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" x1="7" y1="14" x2="17" y2="14"/>
       </svg>`,
     };
-    // ────────────────────────────────────────────────────────────────────────
 
-    // ── Ability system constants ─────────────────────────────────────────────
+    // ── Ability system ───────────────────────────────────────────────────────
     const ABILITIES = {
-      'Rytíř':     { icon: '⚡',  name: 'Nájezd',           desc: 'Pohyb +2 a okamžitý útok na cíl v dosahu.' },
-      'Lučištník': { icon: '🎯', name: 'Přesná střela',    desc: 'Dvojitý dosah, ignoruje terénní obranu obránce.' },
-      'Kopinář':   { icon: '🛡️', name: 'Štítová zeď',      desc: '-2 poškození tento tah, nelze se pohybovat.' },
-      'Katapult':  { icon: '💥', name: 'Bombardování',     desc: 'AoE útok — vybrané pole + všichni sousedé.' },
-      'Kněz':      { icon: '✝️', name: 'Zmrtvýchvstání',   desc: 'Oživí poslední padlou spojeneckou jednotku s 3 HP. (1× za hru)' },
+      'Rytíř':     { icon: '⚡',  name: 'Nájezd',         desc: 'Pohyb +2 a okamžitý útok na cíl v dosahu.' },
+      'Lučištník': { icon: '🎯', name: 'Přesná střela',  desc: 'Dvojitý dosah, ignoruje terénní obranu obránce.' },
+      'Kopinář':   { icon: '🛡️', name: 'Štítová zeď',    desc: '-2 poškození tento tah, nelze se pohybovat.' },
+      'Katapult':  { icon: '💥', name: 'Bombardování',   desc: 'AoE útok — vybrané pole + všichni sousedé.' },
+      'Kněz':      { icon: '✝️', name: 'Zmrtvýchvstání', desc: 'Oživí poslední padlou spojeneckou jednotku s 3 HP. (1× za hru)' },
     };
 
-    // ── Veteran system constants ─────────────────────────────────────────────
-    const RANK_KILLS    = [0, 2, 4, 6];
-    const RANK_NAMES    = ['Rekrut', 'Veterán', 'Elita', 'Legenda'];
-    const RANK_ICONS    = ['', '⭐', '⭐⭐', '⭐⭐⭐'];
+    // ── Veteran system ───────────────────────────────────────────────────────
+    const RANK_KILLS = [0, 2, 4, 6];
+    const RANK_NAMES = ['Rekrut', 'Veterán', 'Elita', 'Legenda'];
+    const RANK_ICONS = ['', '⭐', '⭐⭐', '⭐⭐⭐'];
     const NICKNAMES = {
       'Rytíř':     ['Rytíř smrti', 'Rudý rytíř', 'Železný rytíř', 'Temný rytíř'],
       'Lučištník': ['Stínový lučištník', 'Orlí oko', 'Nemilosrdný lučištník', 'Tichý lovec'],
@@ -540,15 +718,19 @@
       'Katapult':  ['Ničitel hradeb', 'Hromobití', 'Bouřlivý katapult', 'Hlas zkázy'],
       'Kněz':      ['Svatý léčitel', 'Věčný kněz', 'Kněz duší', 'Stínolamač'],
     };
-    // ────────────────────────────────────────────────────────────────────────
 
-    const boardElement = document.getElementById('board');
-    const turnText = document.getElementById('turnText');
-    const message = document.getElementById('message');
-    const unitStatus = document.getElementById('unitStatus');
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const boardElement  = document.getElementById('board');
+    const turnText      = document.getElementById('turnText');
+    const message       = document.getElementById('message');
+    const unitStatus    = document.getElementById('unitStatus');
     const restartButton = document.getElementById('restartButton');
-    const aiToggleBtn = document.getElementById('aiToggle');
+    const aiToggleBtn   = document.getElementById('aiToggle');
+    const contextMenu   = document.getElementById('contextMenu');
+    const ctxMoveAttack = document.getElementById('ctxMoveAttack');
+    const ctxAbility    = document.getElementById('ctxAbility');
 
+    // ── Game state ───────────────────────────────────────────────────────────
     let hexes = [];
     let units = [];
     let castles = [];
@@ -559,24 +741,204 @@
     let validHeals = [];
     let aiEnabled = true;
     let aiThinking = false;
+    let turnTransition = false; // blocks input during 1s turn-end pause
 
-    // Move animation
-    let pendingMoveAnim = null; // { unitId, fromRect }
+    let pendingMoveAnim = null;
 
-    // Ability state
-    let abilityMode = null;  // null | 'charge-move' | 'charge-attack' | 'bombard'
+    let abilityMode = null;
     let abilityUnit = null;
     let lastKilledFriendly = { 1: null, 2: null };
 
-    // Weather
     let currentWeather = WEATHER_TYPES[0];
-    let weatherTurnCounter = 0; // counts player-1 turns
+    let weatherTurnCounter = 0;
 
-    // Fog of War
-    let explored = { 1: new Set(), 2: new Set() };   // hexes ever seen
-    let lastKnownEnemies = { 1: new Map(), 2: new Map() }; // key -> unit snapshot
-    let currentVisible = new Set(); // recomputed each render
+    let explored = { 1: new Set(), 2: new Set() };
+    let lastKnownEnemies = { 1: new Map(), 2: new Map() };
+    let currentVisible = new Set();
 
+    // Positions of enemies that attacked from fog — key="x,y", value=turnsLeft
+    let attackReveal = new Map();
+
+    // ── Action log ───────────────────────────────────────────────────────────
+    let actionLogEntries = [];
+
+    function pushLog(text) {
+      actionLogEntries.push(text);
+      if (actionLogEntries.length > 3) actionLogEntries.shift();
+      const el = document.getElementById('actionLog');
+      el.innerHTML = actionLogEntries.map((t, i) =>
+        `<div class="log-entry${i === actionLogEntries.length - 1 ? ' log-newest' : ''}">${t}</div>`
+      ).join('');
+    }
+
+    // ── Tooltip engine ───────────────────────────────────────────────────────
+    const gameTooltipEl = document.getElementById('gameTooltip');
+    let tooltipTimer = null;
+
+    function showTooltip(x, y, html, delay = 500) {
+      clearTimeout(tooltipTimer);
+      tooltipTimer = setTimeout(() => {
+        gameTooltipEl.innerHTML = html;
+        const w = 258, h = 180;
+        let left = x + 14, top = y + 14;
+        if (left + w > window.innerWidth)  left = x - w - 8;
+        if (top  + h > window.innerHeight) top  = y - h - 8;
+        gameTooltipEl.style.left = left + 'px';
+        gameTooltipEl.style.top  = top  + 'px';
+        gameTooltipEl.classList.add('show');
+      }, delay);
+    }
+
+    function hideTooltip() {
+      clearTimeout(tooltipTimer);
+      gameTooltipEl.classList.remove('show');
+    }
+
+    function buildAbilityTooltip(unit) {
+      const ab = ABILITIES[unit.type];
+      if (!ab) return null;
+      const isRez      = unit.type === 'Kněz';
+      const rezDone    = isRez && unit.resurrectionUsed;
+      const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
+      const canUse     = !unit.abilityUsed && !rezDone && !noDeadAlly;
+      const cdText = canUse ? 'Připravena — použitelná 1× za tah.'
+        : rezDone    ? 'Použita (1× za hru).'
+        : noDeadAlly ? 'Žádná padlá spojenecká jednotka.'
+        : 'Již použita tento tah.';
+      return `<div class="tt-title">${ab.icon} ${ab.name}</div>
+              <div class="tt-desc">${ab.desc}</div>
+              <div class="tt-cd">${cdText}</div>`;
+    }
+
+    // ── Attack preview ────────────────────────────────────────────────────────
+    function computeAttackPreview(attacker, defender, ignoreTerrain = false) {
+      const baseAtk     = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
+      const atkBonus    = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
+      const defBonus    = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
+      const castleBonus = ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
+      const shieldBonus = defender.shieldWall ? 2 : 0;
+      const totalAtk    = baseAtk + atkBonus;
+      const totalDef    = defBonus + castleBonus + shieldBonus;
+      const damage      = Math.max(0, totalAtk - totalDef);
+      return { baseAtk, atkBonus, defBonus, castleBonus, shieldBonus, totalAtk, totalDef, damage };
+    }
+
+    function buildAttackTooltipHtml(attacker, defender, ignoreTerrain = false) {
+      const p = computeAttackPreview(attacker, defender, ignoreTerrain);
+      const aName = attacker.nickname || attacker.type;
+      const dName = defender.nickname || defender.type;
+
+      let atkLine = `${p.baseAtk}`;
+      if (attacker.type === 'Rytíř') atkLine = `${attacker.attack} + 1 Rytíř = ${p.baseAtk}`;
+      const mods = [];
+      if (p.atkBonus)    mods.push(`<span style="color:#d4aa50">+${p.atkBonus} kopec</span>`);
+      if (ignoreTerrain) mods.push(`<span style="color:#60b8e0">🎯 přesná</span>`);
+      const atkMods = mods.length ? ` ${mods.join(' ')}` : '';
+
+      const defMods = [];
+      if (p.defBonus)    defMods.push(`<span style="color:#60c060">−${p.defBonus} les</span>`);
+      if (p.castleBonus) defMods.push(`<span style="color:#a090c0">−${p.castleBonus} hrad</span>`);
+      if (p.shieldBonus) defMods.push(`<span style="color:#6090c0">−${p.shieldBonus} štít</span>`);
+
+      const newHp   = Math.max(0, defender.hp - p.damage);
+      const willDie = newHp === 0;
+
+      return `<div class="tt-title">⚔️ ${aName} → ${dName}</div>
+              <hr class="tt-sep">
+              <div class="tt-row"><span class="tt-key">Útok:</span> ${atkLine}${atkMods} = <b>${p.totalAtk}</b></div>
+              ${defMods.length ? `<div class="tt-row"><span class="tt-key">Obrana:</span> ${defMods.join(' ')} = −${p.totalDef}</div>` : ''}
+              <hr class="tt-sep">
+              <div class="tt-dmg">Poškození: <strong>${p.damage}</strong></div>
+              <div style="font-size:0.74rem;color:${willDie ? '#e06060' : '#9a9080'};margin-top:3px">
+                ${dName}: ${defender.hp} → ${newHp} HP${willDie ? ' ☠️' : ''}
+              </div>`;
+    }
+
+    // ── Turn-end banner ───────────────────────────────────────────────────────
+    const turnEndBannerEl = document.getElementById('turnEndBanner');
+
+    function showTurnEndBanner(callback) {
+      turnEndBannerEl.classList.add('show');
+      setTimeout(() => {
+        turnEndBannerEl.classList.remove('show');
+        setTimeout(callback, 180);
+      }, 1000);
+    }
+
+    // ── Context menu ─────────────────────────────────────────────────────────
+    let ctxUnit = null;
+
+    function showContextMenu(e, unit) {
+      e.preventDefault();
+      e.stopPropagation();
+      ctxUnit = unit;
+      const ab = ABILITIES[unit.type];
+      const isRez = unit.type === 'Kněz';
+      const rezDone = isRez && unit.resurrectionUsed;
+      const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
+      const canUse = ab && !unit.abilityUsed && !rezDone && !noDeadAlly;
+      const abLabel = ab
+        ? `✨ Použít schopnost: ${ab.name}`
+        : '✨ Schopnost nedostupná';
+      ctxAbility.textContent = abLabel;
+      ctxAbility.className = 'ctx-item ctx-ability' + (canUse ? '' : ' disabled');
+      // Position near cursor, clamp to viewport
+      const menuW = 198, menuH = 88;
+      let left = e.clientX + 8, top = e.clientY + 8;
+      if (left + menuW > window.innerWidth)  left = e.clientX - menuW - 4;
+      if (top  + menuH > window.innerHeight) top  = e.clientY - menuH - 4;
+      contextMenu.style.left = left + 'px';
+      contextMenu.style.top  = top  + 'px';
+      contextMenu.classList.remove('hidden');
+    }
+
+    function hideContextMenu() {
+      contextMenu.classList.add('hidden');
+      ctxUnit = null;
+    }
+
+    ctxMoveAttack.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ctxUnit) selectUnit(ctxUnit);
+      hideContextMenu();
+    });
+
+    ctxAbility.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ctxUnit && !ctxAbility.classList.contains('disabled')) {
+        selectUnit(ctxUnit);
+        activateAbility(ctxUnit);
+      }
+      hideContextMenu();
+    });
+
+    ctxAbility.addEventListener('mouseenter', (e) => {
+      if (!ctxUnit) return;
+      const html = buildAbilityTooltip(ctxUnit);
+      if (html) showTooltip(e.clientX, e.clientY, html, 300);
+    });
+    ctxAbility.addEventListener('mousemove', (e) => {
+      // update tooltip position on move
+      if (gameTooltipEl.classList.contains('show')) {
+        const w = 258, h = 180;
+        let left = e.clientX + 14, top = e.clientY + 14;
+        if (left + w > window.innerWidth)  left = e.clientX - w - 8;
+        if (top  + h > window.innerHeight) top  = e.clientY - h - 8;
+        gameTooltipEl.style.left = left + 'px';
+        gameTooltipEl.style.top  = top  + 'px';
+      }
+    });
+    ctxAbility.addEventListener('mouseleave', hideTooltip);
+
+    // Close on any left-click outside menu
+    document.addEventListener('click', () => hideContextMenu());
+    // Always suppress browser context menu everywhere in the game
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!contextMenu.contains(e.target)) hideContextMenu();
+    });
+
+    // ── Game init ────────────────────────────────────────────────────────────
     function createGame() {
       hexes = [];
       units = [];
@@ -598,13 +960,16 @@
       lastKilledFriendly = { 1: null, 2: null };
       currentWeather = WEATHER_TYPES[0];
       weatherTurnCounter = 0;
+      actionLogEntries = [];
+      attackReveal = new Map();
+      document.getElementById('actionLog').innerHTML = '';
       updateWeatherUI();
       boardElement.innerHTML = '';
 
       for (let y = 0; y < 9; y++) {
-        const rowOffset = document.createElement('div');
-        rowOffset.className = y % 2 === 1 ? 'row-offset' : '';
-        rowOffset.style.display = 'contents';
+        const rowEl = document.createElement('div');
+        rowEl.className = 'hex-row' + (y % 2 === 1 ? ' hex-row-odd' : '');
+        boardElement.appendChild(rowEl);
         for (let x = 0; x < 9; x++) {
           const hex = document.createElement('div');
           hex.className = 'hex';
@@ -614,12 +979,18 @@
           const tile = document.createElement('div');
           tile.className = 'tile';
           tile.dataset.terrain = terrainTypes[mapTemplate[y][x]];
-          tile.style.backgroundColor = '';
           hex.appendChild(tile);
-          boardElement.appendChild(hex);
+          rowEl.appendChild(hex);
           hexes.push({ x, y, el: hex, tile, unit: null });
 
           hex.addEventListener('click', () => selectHex(x, y));
+          hex.addEventListener('contextmenu', (e) => {
+            if (aiThinking || turnTransition) return;
+            const h = getHex(x, y);
+            if (h.unit && h.unit.player === currentPlayer) {
+              showContextMenu(e, h.unit);
+            }
+          });
         }
       }
       placeUnits();
@@ -663,25 +1034,16 @@
       }
     }
 
-    function getHex(x, y) {
-      return hexes.find(cell => cell.x === x && cell.y === y);
-    }
-
-    function getTerrainAt(x, y) {
-      return terrainTypes[mapTemplate[y][x]];
-    }
-
-    function getCastleAt(x, y) {
-      return castles.find(c => c.x === x && c.y === y) || null;
-    }
+    function getHex(x, y)  { return hexes.find(cell => cell.x === x && cell.y === y); }
+    function getTerrainAt(x, y) { return terrainTypes[mapTemplate[y][x]]; }
+    function getCastleAt(x, y)  { return castles.find(c => c.x === x && c.y === y) || null; }
 
     function selectHex(x, y) {
-      if (aiThinking) return;
+      if (aiThinking || turnTransition) return;
       if (checkGameOver()) return;
-      const hex = getHex(x, y);
+      const hex  = getHex(x, y);
       const unit = hex.unit;
 
-      // ── Ability modes ───────────────────────────────────────────────────
       if (abilityMode === 'charge-move') {
         if (validMoves.some(p => p.x === x && p.y === y) && !hex.unit) chargeMove(abilityUnit, x, y);
         return;
@@ -699,7 +1061,6 @@
         return;
       }
 
-      // ── Precision shot ──────────────────────────────────────────────────
       if (selectedUnit?.precisionShot && unit && unit.player !== currentPlayer) {
         if (validAttacks.some(p => p.x === x && p.y === y)) {
           performAttack(selectedUnit, unit, true);
@@ -707,7 +1068,6 @@
         }
       }
 
-      // Priest healing
       if (selectedUnit && selectedUnit.type === 'Kněz' && unit && unit.player === currentPlayer && unit.id !== selectedUnit.id) {
         if (validHeals.some(h => h.x === x && h.y === y)) {
           healUnit(selectedUnit, unit);
@@ -737,20 +1097,18 @@
       abilityMode = null;
       abilityUnit = null;
       selectedUnit = unit;
-      validMoves = calculateMoveTargets(unit);
+      validMoves   = calculateMoveTargets(unit);
       validAttacks = calculateAttackTargets(unit);
-      validHeals = calculateHealTargets(unit);
+      validHeals   = calculateHealTargets(unit);
       const displayName = unit.nickname || unit.type;
       const extra = unit.type === 'Kněz' ? ' Může léčit spojence.' : '';
       setMessage(`Vybrán ${displayName}. Pohyb: ${unit.move}, Útok: ${unit.attack}, Dosah: ${unit.range}.${extra}`);
-      updateAbilityBar(unit);
       renderBoard();
     }
 
     function canMoveTo(unit, x, y) {
       return validMoves.some(pos => pos.x === x && pos.y === y);
     }
-
     function canAttack(attacker, target) {
       return validAttacks.some(pos => pos.x === target.x && pos.y === target.y) && target.player !== attacker.player;
     }
@@ -759,40 +1117,51 @@
       const hex = getHex(x, y);
       if (!hex) return;
       hex.tile.classList.remove('flash-hit', 'tile-shake');
-      void hex.tile.offsetWidth; // force reflow
+      void hex.tile.offsetWidth;
       hex.tile.classList.add('flash-hit', 'tile-shake');
       setTimeout(() => hex.tile.classList.remove('flash-hit', 'tile-shake'), 500);
     }
 
     function performAttack(attacker, defender, ignoreTerrain = false) {
-      const baseAtk = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
-      const atkBonus  = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
-      const defBonus  = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
-      const castleBonus  = ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
-      const shieldBonus  = defender.shieldWall ? 2 : 0;
-      const damage = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus);
+      const baseAtk    = attacker.attack + (attacker.type === 'Rytíř' ? 1 : 0);
+      const atkBonus   = getTerrainAt(attacker.x, attacker.y) === 'Kopec' ? 1 : 0;
+      const defBonus   = ignoreTerrain ? 0 : (getTerrainAt(defender.x, defender.y) === 'Les' ? 1 : 0);
+      const castleBonus= ignoreTerrain ? 0 : (getCastleAt(defender.x, defender.y) ? 2 : 0);
+      const shieldBonus= defender.shieldWall ? 2 : 0;
+      const damage     = Math.max(0, baseAtk + atkBonus - defBonus - castleBonus - shieldBonus);
 
       flashTile(defender.x, defender.y);
       defender.hp = Math.max(0, defender.hp - damage);
       attacker.attacked = true;
       if (attacker.precisionShot) attacker.precisionShot = false;
 
+      // If attacker struck from outside fog-player's visibility, reveal their position for 2 turns
+      const fogP = aiEnabled ? 1 : currentPlayer;
+      if (attacker.player !== fogP) {
+        const atkKey = `${attacker.x},${attacker.y}`;
+        if (!currentVisible.has(atkKey)) {
+          attackReveal.set(atkKey, 2);
+        }
+      }
+
       const bonusInfo = [];
-      if (atkBonus)    bonusInfo.push('+1 útok (kopec)');
-      if (defBonus)    bonusInfo.push('-1 pošk. (les)');
-      if (castleBonus) bonusInfo.push('-2 pošk. (hrad)');
-      if (shieldBonus) bonusInfo.push('-2 pošk. (štít)');
-      if (ignoreTerrain) bonusInfo.push('🎯 přesná střela');
-      const info = bonusInfo.length ? ` [${bonusInfo.join(', ')}]` : '';
-      setMessage(`${attacker.nickname||attacker.type} útočí na ${defender.nickname||defender.type}: ${damage} pošk.${info}`);
+      if (atkBonus)      bonusInfo.push(`+${atkBonus} kopec`);
+      if (defBonus)      bonusInfo.push(`−${defBonus} les`);
+      if (castleBonus)   bonusInfo.push(`−${castleBonus} hrad`);
+      if (shieldBonus)   bonusInfo.push(`−${shieldBonus} štít`);
+      if (ignoreTerrain) bonusInfo.push('🎯 přesná');
+      const info = bonusInfo.length ? ` (${bonusInfo.join(', ')})` : '';
+      const aName = attacker.nickname || attacker.type;
+      const dName = defender.nickname || defender.type;
+      setMessage(`⚔️ ${aName} útočil na ${dName} — ${damage} poškození${info}. ${dName} má ${defender.hp}/${defender.maxHp} HP.`);
 
       if (defender.hp <= 0) {
         attacker.kills += 1;
         checkPromotion(attacker);
         setTimeout(() => {
+          const dN = defender.nickname || defender.type;
           removeUnit(defender);
-          const defName = defender.nickname || defender.type;
-          setMessage(`${attacker.nickname || attacker.type} poráží ${defName}!`);
+          setMessage(`💀 ${attacker.nickname || attacker.type} poráží ${dN}! (eliminován)`);
           renderBoard();
         }, 300);
       }
@@ -832,17 +1201,15 @@
 
     function moveUnit(unit, x, y) {
       const start = getHex(unit.x, unit.y);
-      const dest = getHex(x, y);
+      const dest  = getHex(x, y);
       if (dest.unit) return;
-      // Capture visual source position for FLIP animation
       const fromEl = start.tile.querySelector('.unit');
       if (fromEl) pendingMoveAnim = { unitId: unit.id, fromRect: fromEl.getBoundingClientRect() };
       start.unit = null;
-      dest.unit = unit;
+      dest.unit  = unit;
       unit.x = x;
       unit.y = y;
       unit.moved = true;
-
       const castle = getCastleAt(x, y);
       if (castle && castle.owner !== unit.player) {
         castle.owner = unit.player;
@@ -854,7 +1221,6 @@
     }
 
     function removeUnit(unit) {
-      // Save snapshot for Priest resurrection (belongs to unit's own player)
       lastKilledFriendly[unit.player] = {
         id: unit.id, player: unit.player, type: unit.type,
         move: unit.move, attack: unit.attack, range: unit.range,
@@ -865,29 +1231,36 @@
       const hex = getHex(unit.x, unit.y);
       if (hex) hex.unit = null;
       units = units.filter(item => item.id !== unit.id);
-      if (selectedUnit?.id === unit.id) { selectedUnit = null; updateAbilityBar(null); }
+      if (selectedUnit?.id === unit.id) selectedUnit = null;
     }
 
     function endTurn() {
-      validMoves = [];
+      validMoves   = [];
       validAttacks = [];
-      validHeals = [];
+      validHeals   = [];
       selectedUnit = null;
+      hideTooltip();
+
+      const leavingPlayer = currentPlayer;
       currentPlayer = currentPlayer === 1 ? 2 : 1;
-      abilityMode = null;
-      abilityUnit = null;
-      updateAbilityBar(null);
+      abilityMode  = null;
+      abilityUnit  = null;
+
+      // Countdown attack-reveal timers each turn
+      attackReveal.forEach((turns, key) => {
+        if (turns <= 1) attackReveal.delete(key);
+        else attackReveal.set(key, turns - 1);
+      });
       units.forEach(unit => {
         if (unit.player === currentPlayer) {
-          unit.moved = false;
-          unit.attacked = false;
-          unit.abilityUsed = false;
-          unit.shieldWall = false;
-          unit.precisionShot = false;
+          unit.moved        = false;
+          unit.attacked     = false;
+          unit.abilityUsed  = false;
+          unit.shieldWall   = false;
+          unit.precisionShot= false;
         }
       });
 
-      // Weather turn counter advances when player 1 starts their turn
       if (currentPlayer === 1) {
         weatherTurnCounter++;
         if (weatherTurnCounter >= WEATHER_CHANGE_INTERVAL) {
@@ -897,16 +1270,29 @@
         }
       }
 
-      // Apply start-of-turn weather effects (lightning, sunshine)
       applyWeatherStartOfTurn(currentPlayer);
 
       updateStatus();
       renderBoard();
       if (checkGameOver()) return;
-      if (currentPlayer === 2 && aiEnabled) {
-        aiThinking = true;
-        setMessage('AI přemýšlí…');
-        setTimeout(aiTurn, 750);
+
+      // After player 1's turn: 1s pause with "Tah končí…" banner
+      if (leavingPlayer === 1) {
+        if (currentPlayer === 2 && aiEnabled) aiThinking = true;
+        turnTransition = true;
+        showTurnEndBanner(() => {
+          turnTransition = false;
+          if (currentPlayer === 2 && aiEnabled) {
+            setMessage('AI přemýšlí…');
+            setTimeout(aiTurn, 400);
+          }
+        });
+      } else {
+        if (currentPlayer === 2 && aiEnabled) {
+          aiThinking = true;
+          setMessage('AI přemýšlí…');
+          setTimeout(aiTurn, 750);
+        }
       }
     }
 
@@ -916,10 +1302,8 @@
 
       const aiUnits = units.filter(u => u.player === 2);
 
-      // Priority 0: Special abilities
       if (aiUseAbilities(aiUnits)) return;
 
-      // Priority 1: Priest heals most damaged ally
       for (const unit of aiUnits) {
         if (unit.type !== 'Kněz') continue;
         const heals = calculateHealTargets(unit);
@@ -931,27 +1315,25 @@
         }
       }
 
-      // Priority 2: Attack — prefer weakest, avoid Legends if possible
       for (const unit of aiUnits) {
         const attacks = calculateAttackTargets(unit);
         if (attacks.length > 0) {
           const targets = units.filter(u => attacks.some(a => a.x === u.x && a.y === u.y));
           targets.sort((a, b) => {
             const aLeg = a.rank === 3, bLeg = b.rank === 3;
-            if (aLeg !== bLeg) return aLeg ? 1 : -1; // avoid Legends
-            return a.hp - b.hp; // prefer weakest
+            if (aLeg !== bLeg) return aLeg ? 1 : -1;
+            return a.hp - b.hp;
           });
           performAttack(unit, targets[0]);
           return;
         }
       }
 
-      // Priority 3: Capture enemy castle
       const enemyCastles = castles.filter(c => c.owner !== 2);
       if (enemyCastles.length > 0) {
         for (const unit of aiUnits) {
           if (unit.type === 'Kněz') continue;
-          const moves = calculateMoveTargets(unit);
+          const moves  = calculateMoveTargets(unit);
           const target = enemyCastles.reduce((best, c) =>
             hexDistance(unit, c) < hexDistance(unit, best) ? c : best, enemyCastles[0]);
           if (moves.some(m => m.x === target.x && m.y === target.y)) {
@@ -961,7 +1343,6 @@
         }
       }
 
-      // Priority 4: Move toward nearest enemy (Katapult stays back, Kněz stays back)
       const enemies = units.filter(u => u.player === 1);
       if (enemies.length === 0) return;
 
@@ -1003,7 +1384,7 @@
       const effectiveMove = customMove !== null ? customMove : Math.max(1, unit.move + weatherMoveBonus());
       const visited = new Set();
       const targets = [];
-      const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
+      const queue   = [{ x: unit.x, y: unit.y, cost: 0 }];
       while (queue.length) {
         const current = queue.shift();
         const key = `${current.x},${current.y}`;
@@ -1047,48 +1428,25 @@
     }
 
     // ── Special abilities ────────────────────────────────────────────────────
-
-    function updateAbilityBar(unit) {
-      const bar = document.getElementById('abilityBar');
-      const btn = document.getElementById('abilityBtn');
-      const hint = document.getElementById('abilityHint');
-      if (!unit || !ABILITIES[unit.type] || unit.player !== currentPlayer) {
-        bar.classList.add('hidden'); return;
-      }
-      bar.classList.remove('hidden');
-      const ab = ABILITIES[unit.type];
-      const isRez = unit.type === 'Kněz';
-      const rezDone = isRez && unit.resurrectionUsed;
-      const noDeadAlly = isRez && !lastKilledFriendly[unit.player];
-      const canUse = !unit.abilityUsed && !rezDone && !noDeadAlly;
-      btn.textContent = `${ab.icon} ${ab.name}`;
-      btn.disabled = !canUse;
-      btn.className = `ability-btn${abilityMode ? ' active-mode' : ''}`;
-      hint.textContent = rezDone ? 'Již použito (1× za hru)' : noDeadAlly ? 'Žádná padlá jednotka' : ab.desc;
-      btn.onclick = () => { if (canUse) activateAbility(unit); };
-    }
-
     function activateAbility(unit) {
       if (!unit || unit.abilityUsed) return;
       switch (unit.type) {
-        case 'Rytíř':     activateCharge(unit);           break;
-        case 'Lučištník': activatePrecisionShot(unit);    break;
-        case 'Kopinář':   activateShieldWall(unit);       break;
-        case 'Katapult':  activateBombardMode(unit);      break;
-        case 'Kněz':      activateResurrection(unit);     break;
+        case 'Rytíř':     activateCharge(unit);        break;
+        case 'Lučištník': activatePrecisionShot(unit); break;
+        case 'Kopinář':   activateShieldWall(unit);    break;
+        case 'Katapult':  activateBombardMode(unit);   break;
+        case 'Kněz':      activateResurrection(unit);  break;
       }
     }
 
-    // Rytíř — Nájezd
     function activateCharge(unit) {
       abilityMode = 'charge-move';
       abilityUnit = unit;
       unit.abilityUsed = true;
       const extMove = Math.max(1, unit.move + weatherMoveBonus() + 2);
-      validMoves = calculateMoveTargets(unit, extMove);
+      validMoves   = calculateMoveTargets(unit, extMove);
       validAttacks = []; validHeals = [];
       setMessage('⚡ Nájezd! Vyber cílové pole pohybu (dosah +2).');
-      updateAbilityBar(unit);
       renderBoard();
     }
 
@@ -1105,8 +1463,8 @@
         abilityMode = null; abilityUnit = null;
         endTurn(); return;
       }
-      abilityMode = 'charge-attack';
-      validMoves = [];
+      abilityMode  = 'charge-attack';
+      validMoves   = [];
       validAttacks = calculateAttackTargets(unit);
       if (validAttacks.length === 0) {
         setMessage('⚡ Nájezd! Žádný nepřítel v dosahu — tah končí.');
@@ -1118,46 +1476,40 @@
       }
     }
 
-    // Lučištník — Přesná střela
     function activatePrecisionShot(unit) {
       unit.precisionShot = true;
-      unit.abilityUsed = true;
-      // Double effective range temporarily to compute targets
+      unit.abilityUsed   = true;
       const savedRange = unit.range;
       unit.range = weatherEffectiveRange(unit) * 2;
       validAttacks = calculateAttackTargets(unit);
-      unit.range = savedRange;
-      validMoves = []; validHeals = [];
+      unit.range   = savedRange;
+      validMoves   = []; validHeals = [];
       setMessage('🎯 Přesná střela! Vyber cíl (dvojitý dosah, ignoruje terén).');
-      updateAbilityBar(unit);
       renderBoard();
     }
 
-    // Kopinář — Štítová zeď
     function activateShieldWall(unit) {
-      unit.shieldWall = true;
+      unit.shieldWall  = true;
       unit.abilityUsed = true;
       setMessage('🛡️ Štítová zeď! Jednotka chrání pozici — přijímá -2 poškození.');
       endTurn();
     }
 
-    // Katapult — Bombardování (výběr pole)
     function activateBombardMode(unit) {
-      abilityMode = 'bombard';
-      abilityUnit = unit;
+      abilityMode  = 'bombard';
+      abilityUnit  = unit;
       unit.abilityUsed = true;
-      const range = weatherEffectiveRange(unit);
+      const range  = weatherEffectiveRange(unit);
       validAttacks = hexesInRange(unit.x, unit.y, range)
         .filter(h => !(h.x === unit.x && h.y === unit.y))
         .map(h => ({ x: h.x, y: h.y }));
-      validMoves = []; validHeals = [];
+      validMoves   = []; validHeals = [];
       setMessage('💥 Bombardování! Vyber střed útoku (AoE — zasáhne i sousedy).');
-      updateAbilityBar(unit);
       renderBoard();
     }
 
     function performBombardment(unit, cx, cy) {
-      abilityMode = null; abilityUnit = null;
+      abilityMode  = null; abilityUnit = null;
       unit.attacked = true;
       const aoeHexes = [{ x: cx, y: cy }, ...neighbors(cx, cy)];
       const toKill = [];
@@ -1177,7 +1529,6 @@
       endTurn();
     }
 
-    // Kněz — Zmrtvýchvstání
     function activateResurrection(priest) {
       if (priest.resurrectionUsed) return;
       const dead = lastKilledFriendly[priest.player];
@@ -1194,7 +1545,7 @@
       freeHex.unit = revived;
       lastKilledFriendly[priest.player] = null;
       priest.resurrectionUsed = true;
-      priest.abilityUsed = true;
+      priest.abilityUsed      = true;
       const name = dead.nickname || dead.type;
       showAnnounce(`✝️ ${name} povstává z mrtvých!`, 2800);
       setMessage(`Kněz oživil ${name} s 3 HP!`);
@@ -1202,7 +1553,6 @@
     }
 
     // ── AI ability helpers ───────────────────────────────────────────────────
-
     function calculateAttackTargetsAt(unit, x, y) {
       const sx = unit.x, sy = unit.y;
       unit.x = x; unit.y = y;
@@ -1212,13 +1562,11 @@
     }
 
     function aiUseAbilities(aiUnits) {
-      // Kněz: resurrect when ally dead
       for (const u of aiUnits) {
         if (u.type === 'Kněz' && !u.abilityUsed && !u.resurrectionUsed && lastKilledFriendly[2]) {
           activateResurrection(u); return true;
         }
       }
-      // Katapult: bombard if 2+ enemies in AoE range
       for (const u of aiUnits) {
         if (u.type !== 'Katapult' || u.abilityUsed) continue;
         const range = weatherEffectiveRange(u);
@@ -1231,12 +1579,11 @@
         });
         if (best) { u.abilityUsed = true; performBombardment(u, best.x, best.y); return true; }
       }
-      // Rytíř: charge if enemy reachable by charge but not normal move
       for (const u of aiUnits) {
         if (u.type !== 'Rytíř' || u.abilityUsed) continue;
-        const normalMoves = calculateMoveTargets(u);
+        const normalMoves   = calculateMoveTargets(u);
         const normalAttacks = calculateAttackTargets(u);
-        if (normalAttacks.length > 0) continue; // can already attack normally
+        if (normalAttacks.length > 0) continue;
         const extMove = Math.max(1, u.move + weatherMoveBonus() + 2);
         for (const pos of calculateMoveTargets(u, extMove)) {
           if (normalMoves.some(m => m.x === pos.x && m.y === pos.y)) continue;
@@ -1245,7 +1592,6 @@
             u.abilityUsed = true;
             const enemies = units.filter(eu => attacks.some(a => a.x === eu.x && a.y === eu.y));
             enemies.sort((a,b) => (a.rank===3?1:-1) - (b.rank===3?1:-1) || a.hp - b.hp);
-            // Execute move+attack directly (AI doesn't use interactive flow)
             const start = getHex(u.x, u.y), dest = getHex(pos.x, pos.y);
             if (!dest || dest.unit) continue;
             start.unit = null; dest.unit = u; u.x = pos.x; u.y = pos.y; u.moved = true;
@@ -1256,7 +1602,6 @@
           }
         }
       }
-      // Lučištník: precision shot when enemy in double range only
       for (const u of aiUnits) {
         if (u.type !== 'Lučištník' || u.abilityUsed) continue;
         if (calculateAttackTargets(u).length > 0) continue;
@@ -1269,7 +1614,6 @@
           performAttack(u, enemies[0], true); return true;
         }
       }
-      // Kopinář: shield wall when below 40% HP
       for (const u of aiUnits) {
         if (u.type !== 'Kopinář' || u.abilityUsed) continue;
         if (u.hp < u.maxHp * 0.4) { activateShieldWall(u); return true; }
@@ -1277,8 +1621,7 @@
       return false;
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-
+    // ── Hex math ─────────────────────────────────────────────────────────────
     function hexDistance(a, b) {
       const ac = offsetToCube(a.x, a.y);
       const bc = offsetToCube(b.x, b.y);
@@ -1286,16 +1629,12 @@
     }
 
     function offsetToCube(x, y) {
-      const col = x;
-      const row = y;
-      const x_cube = col - (row - (row & 1)) / 2;
-      const z_cube = row;
-      const y_cube = -x_cube - z_cube;
-      return { x: x_cube, y: y_cube, z: z_cube };
+      const x_cube = x - (y - (y & 1)) / 2;
+      const z_cube = y;
+      return { x: x_cube, y: -x_cube - z_cube, z: z_cube };
     }
 
     // ── Weather helpers ──────────────────────────────────────────────────────
-
     function weatherMoveBonus() {
       if (currentWeather.id === 'dest' || currentWeather.id === 'boure') return -1;
       if (currentWeather.id === 'slunecno') return 1;
@@ -1303,8 +1642,7 @@
     }
 
     function weatherEffectiveRange(unit) {
-      if (currentWeather.id === 'mlha' && (unit.type === 'Lučištník' || unit.type === 'Katapult'))
-        return 1;
+      if (currentWeather.id === 'mlha' && (unit.type === 'Lučištník' || unit.type === 'Katapult')) return 1;
       if (currentWeather.id === 'boure') return Math.max(1, unit.range - 1);
       return unit.range;
     }
@@ -1316,11 +1654,8 @@
     function applyWeatherStartOfTurn(player) {
       if (currentWeather.id === 'boure') {
         const victims = units.filter(u => u.player === player && getTerrainAt(u.x, u.y) === 'Kopec');
-        let killed = [];
-        victims.forEach(u => {
-          u.hp = Math.max(0, u.hp - 1);
-          if (u.hp === 0) killed.push(u);
-        });
+        const killed  = [];
+        victims.forEach(u => { u.hp = Math.max(0, u.hp - 1); if (u.hp === 0) killed.push(u); });
         killed.forEach(u => removeUnit(u));
         if (victims.length) setMessage(`⚡ Bouře! ${victims.length} jednotka(y) na kopci zasažena bleskem!`);
       }
@@ -1348,27 +1683,32 @@
     }
 
     function updateWeatherUI() {
+      const remaining = WEATHER_CHANGE_INTERVAL - weatherTurnCounter;
+      const suffix    = remaining === 1 ? 'tah' : remaining < 5 ? 'tahy' : 'tahů';
+      const timerTxt  = `Za ${remaining} ${suffix} se změní`;
+      // Right panel badge
       document.getElementById('wIcon').textContent  = currentWeather.icon;
       document.getElementById('wName').textContent  = currentWeather.name;
       document.getElementById('wDesc').textContent  = currentWeather.desc;
-      const remaining = WEATHER_CHANGE_INTERVAL - weatherTurnCounter;
-      const suffix = remaining === 1 ? 'tah' : remaining < 5 ? 'tahy' : 'tahů';
-      document.getElementById('wTimer').textContent = `Za ${remaining} ${suffix} se změní`;
+      document.getElementById('wTimer').textContent = timerTxt;
+      // Left panel
+      document.getElementById('wIconL').textContent  = currentWeather.icon;
+      document.getElementById('wNameL').textContent  = currentWeather.name;
+      document.getElementById('wDescL').textContent  = currentWeather.desc;
+      document.getElementById('wTimerL').textContent = timerTxt;
     }
 
-    // ── Fog of War helpers ──────────────────────────────────────────────────
-
+    // ── Fog of War ────────────────────────────────────────────────────────────
     function hexesInRange(cx, cy, range) {
       return hexes.filter(h => hexDistance({ x: cx, y: cy }, h) <= range);
     }
 
     function computeVisible(player) {
-      const vis = new Set();
+      const vis      = new Set();
       const unitSight = Math.max(1, 2 + weatherSightBonus());
       units.filter(u => u.player === player).forEach(u => {
         hexesInRange(u.x, u.y, unitSight).forEach(h => vis.add(`${h.x},${h.y}`));
       });
-      // Castles always have sight 1 (unaffected by weather)
       castles.filter(c => c.owner === player).forEach(c => {
         hexesInRange(c.x, c.y, 1).forEach(h => vis.add(`${h.x},${h.y}`));
       });
@@ -1377,12 +1717,11 @@
 
     function updateFog(player) {
       currentVisible = computeVisible(player);
-      // Expand explored set and snapshot enemy positions for "last known state"
       currentVisible.forEach(key => {
         explored[player].add(key);
         const [x, y] = key.split(',').map(Number);
-        const hex = getHex(x, y);
-        const enemy = hex.unit && hex.unit.player !== player ? hex.unit : null;
+        const hex    = getHex(x, y);
+        const enemy  = hex.unit && hex.unit.player !== player ? hex.unit : null;
         if (enemy) {
           lastKnownEnemies[player].set(key, {
             symbol: enemy.symbol, player: enemy.player,
@@ -1395,11 +1734,9 @@
       });
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-
     function neighbors(x, y) {
       const offsets = (y % 2 === 0)
-        ? [{dx: -1,dy:0},{dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},{dx:0,dy:1}]
+        ? [{dx:-1,dy:0},{dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},{dx:0,dy:1}]
         : [{dx:-1,dy:0},{dx:-1,dy:-1},{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:1}];
       return offsets
         .map(o => ({ x: x + o.dx, y: y + o.dy }))
@@ -1414,12 +1751,11 @@
     }
 
     function makeUnitEl(unit, ghost = false) {
-      const el = document.createElement('div');
-      let cls = `unit player${unit.player}`;
+      const el  = document.createElement('div');
+      let cls   = `unit player${unit.player}`;
       if (ghost) cls += ' ghost';
       if (!ghost && unit.rank === 3) cls += ' rank-legend';
       el.className = cls;
-      // SVG icon (fall back to symbol text if type unknown)
       const svgMarkup = UNIT_SVGS[unit.type];
       if (svgMarkup) {
         el.innerHTML = svgMarkup;
@@ -1433,38 +1769,45 @@
         el.appendChild(stars);
       }
       const hp = document.createElement('span');
+      hp.className = 'hp-badge';
       hp.textContent = unit.hp;
       el.appendChild(hp);
       return el;
     }
 
     function renderBoard() {
-      // Fog: always render from player 1's perspective when AI handles player 2
       const fogPlayer = aiEnabled ? 1 : currentPlayer;
       updateFog(fogPlayer);
 
       boardElement.querySelectorAll('.hex').forEach(hexEl => {
-        const x = parseInt(hexEl.dataset.x, 10);
-        const y = parseInt(hexEl.dataset.y, 10);
+        const x   = parseInt(hexEl.dataset.x, 10);
+        const y   = parseInt(hexEl.dataset.y, 10);
         const key = `${x},${y}`;
         const hex = getHex(x, y);
         const tile = hex.tile;
 
-        // Clear previous state
         hexEl.classList.remove('fog-hidden', 'fog-explored');
-        tile.classList.remove('highlight', 'move-target', 'attack-target', 'heal-target');
+        tile.classList.remove('highlight', 'move-target', 'attack-target', 'heal-target', 'attack-reveal');
         tile.querySelectorAll('.unit, .castle-marker').forEach(el => el.remove());
 
         const isVisible  = currentVisible.has(key);
         const isExplored = explored[fogPlayer].has(key);
 
-        // ── Completely dark — never seen ──────────────────────────────────
+        // Attack-reveal override: enemy struck from fog — show them with red pulse
+        if (attackReveal.has(key) && !isVisible) {
+          const castle = getCastleAt(x, y);
+          if (castle) tile.appendChild(makeCastleMarker(castle));
+          tile.classList.add('attack-reveal');
+          const h = getHex(x, y);
+          if (h.unit && h.unit.player !== fogPlayer) tile.appendChild(makeUnitEl(h.unit));
+          return;
+        }
+
         if (!isExplored) {
           hexEl.classList.add('fog-hidden');
           return;
         }
 
-        // ── Explored but not currently visible — greyscale + last known ──
         if (!isVisible) {
           hexEl.classList.add('fog-explored');
           const castle = getCastleAt(x, y);
@@ -1474,19 +1817,17 @@
           return;
         }
 
-        // ── Fully visible ─────────────────────────────────────────────────
         const castle = getCastleAt(x, y);
         if (castle) tile.appendChild(makeCastleMarker(castle));
 
         if (selectedUnit && selectedUnit.x === x && selectedUnit.y === y) tile.classList.add('highlight');
-        if (validMoves.some(p => p.x === x && p.y === y))   tile.classList.add('move-target');
+        if (validMoves.some(p   => p.x === x && p.y === y)) tile.classList.add('move-target');
         if (validAttacks.some(p => p.x === x && p.y === y)) tile.classList.add('attack-target');
-        if (validHeals.some(p => p.x === x && p.y === y))   tile.classList.add('heal-target');
+        if (validHeals.some(p   => p.x === x && p.y === y)) tile.classList.add('heal-target');
 
         if (hex.unit) {
           const unitEl = makeUnitEl(hex.unit);
           tile.appendChild(unitEl);
-          // FLIP movement animation
           if (pendingMoveAnim && hex.unit.id === pendingMoveAnim.unitId) {
             const { fromRect } = pendingMoveAnim;
             pendingMoveAnim = null;
@@ -1494,7 +1835,7 @@
             const dx = fromRect.left - toRect.left;
             const dy = fromRect.top  - toRect.top;
             if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-              unitEl.style.transform = `translate(${dx}px, ${dy}px)`;
+              unitEl.style.transform  = `translate(${dx}px, ${dy}px)`;
               unitEl.style.transition = 'none';
               requestAnimationFrame(() => requestAnimationFrame(() => {
                 unitEl.style.transition = 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)';
@@ -1510,33 +1851,51 @@
 
     function updateStatus() {
       turnText.textContent = `Hráč ${currentPlayer} ${currentPlayer === 1 ? '(žlutý)' : '(modrý)'}`;
+
+      // Right panel: unit list for both players
       const castleInfo = castles.map(c =>
-        `Hrad: ${c.owner === 1 ? '🟡 H1' : '🔵 H2'}`
-      ).join(' | ');
-      unitStatus.innerHTML =
-        `<div style="margin-bottom:8px;font-size:0.8rem;color:#b7ae9f">${castleInfo}</div>` +
-        units.map(unit => {
-          const filled = Math.round(unit.hp / unit.maxHp * 8);
-          const bar = '█'.repeat(filled) + '░'.repeat(8 - filled);
-          const rankBadge = unit.rank > 0
-            ? `<span style="font-size:0.7rem">${RANK_ICONS[unit.rank]} ${RANK_NAMES[unit.rank]}</span> `
-            : '';
-          const displayName = unit.nickname
-            ? `<span title="${unit.type}">${unit.nickname}</span>`
-            : unit.type;
-          const killsStr = `<span style="color:#9a9080;font-size:0.7rem"> (${unit.kills} kills)</span>`;
-          return `<div style="margin-bottom:6px;">
-            <strong style="color:${unit.player===1?'#d9be83':'#739cc6'}">${unit.symbol} ${displayName}</strong>${killsStr}<br>
-            ${rankBadge}<span style="font-family:monospace;font-size:0.78rem">${bar} ${unit.hp}/${unit.maxHp}</span>
-          </div>`;
-        }).join('');
+        `Hrad ${castles.indexOf(c)+1}: ${c.owner === 1 ? '🟡 H1' : '🔵 H2'}`
+      ).join(' · ');
+
+      let html = `<div style="font-size:0.62rem;color:#9a9080;padding:2px 0 8px">${castleInfo}</div>`;
+
+      for (const pNum of [1, 2]) {
+        const color  = pNum === 1 ? '#d9be83' : '#739cc6';
+        const pUnits = units.filter(u => u.player === pNum);
+        html += `<div class="unit-list-hdr" style="color:${color}">Hráč ${pNum} ${pNum===1?'(žlutý)':'(modrý)'}</div>`;
+        if (pUnits.length === 0) {
+          html += `<div style="font-size:0.7rem;color:#6a6058;margin-bottom:8px">— žádné jednotky —</div>`;
+        } else {
+          pUnits.forEach(unit => {
+            const pct   = Math.max(0, Math.min(100, Math.round(unit.hp / unit.maxHp * 100)));
+            const dname = unit.nickname ? `<span title="${unit.type}">${unit.nickname}</span>` : unit.type;
+            const stars = unit.rank > 0 ? `<span class="ur-stars">${RANK_ICONS[unit.rank]}</span>` : '';
+            html += `<div class="unit-row" data-unit-id="${unit.id}">
+              <div class="unit-row-top">
+                <span class="ur-icon" style="color:${color}">${unit.symbol}</span>
+                <span class="ur-name" style="color:${color}">${dname}</span>
+                ${stars}
+                <span class="ur-kills">${unit.kills}💀</span>
+              </div>
+              <div class="hp-bar-row">
+                <div class="hp-bar-bg"><div class="hp-bar-fill p${pNum}" style="width:${pct}%"></div></div>
+                <span class="hp-bar-txt">${unit.hp}/${unit.maxHp}</span>
+              </div>
+            </div>`;
+          });
+        }
+      }
+      unitStatus.innerHTML = html;
+
       if (!units.some(u => u.player === currentPlayer)) checkGameOver();
     }
 
     function setMessage(text) {
       message.textContent = text;
+      pushLog(text);
     }
 
+    // ── Button listeners ─────────────────────────────────────────────────────
     aiToggleBtn.addEventListener('click', () => {
       aiEnabled = !aiEnabled;
       aiToggleBtn.textContent = `AI: ${aiEnabled ? 'Zapnuto' : 'Vypnuto'}`;
@@ -1544,10 +1903,56 @@
 
     restartButton.addEventListener('click', createGame);
 
-    // Parallax background
-    window.addEventListener('scroll', () => {
-      document.documentElement.style.setProperty('--parallax-y', window.scrollY + 'px');
-    }, { passive: true });
+    // ── Board hover: attack preview tooltip ───────────────────────────────────
+    boardElement.addEventListener('mouseover', (e) => {
+      if (!selectedUnit) { hideTooltip(); return; }
+      const hexEl = e.target.closest('.hex');
+      if (!hexEl) { hideTooltip(); return; }
+      const x = parseInt(hexEl.dataset.x, 10);
+      const y = parseInt(hexEl.dataset.y, 10);
+      const hex = getHex(x, y);
+      if (!hex) return;
+      if (hex.unit && hex.unit.player !== selectedUnit.player) {
+        if (validAttacks.some(p => p.x === x && p.y === y)) {
+          showTooltip(e.clientX, e.clientY,
+            buildAttackTooltipHtml(selectedUnit, hex.unit, selectedUnit.precisionShot), 200);
+          return;
+        }
+      }
+      hideTooltip();
+    });
+    boardElement.addEventListener('mousemove', (e) => {
+      if (gameTooltipEl.classList.contains('show')) {
+        const w = 258, h = 180;
+        let left = e.clientX + 14, top = e.clientY + 14;
+        if (left + w > window.innerWidth)  left = e.clientX - w - 8;
+        if (top  + h > window.innerHeight) top  = e.clientY - h - 8;
+        gameTooltipEl.style.left = left + 'px';
+        gameTooltipEl.style.top  = top  + 'px';
+      }
+    });
+    boardElement.addEventListener('mouseleave', hideTooltip);
+
+    // ── Unit list hover: ability tooltip ─────────────────────────────────────
+    unitStatus.addEventListener('mouseover', (e) => {
+      const row = e.target.closest('[data-unit-id]');
+      if (!row) { hideTooltip(); return; }
+      const unit = units.find(u => u.id === row.dataset.unitId);
+      if (!unit) return;
+      const html = buildAbilityTooltip(unit);
+      if (html) showTooltip(e.clientX, e.clientY, html);
+    });
+    unitStatus.addEventListener('mousemove', (e) => {
+      if (gameTooltipEl.classList.contains('show')) {
+        const w = 258, h = 180;
+        let left = e.clientX + 14, top = e.clientY + 14;
+        if (left + w > window.innerWidth)  left = e.clientX - w - 8;
+        if (top  + h > window.innerHeight) top  = e.clientY - h - 8;
+        gameTooltipEl.style.left = left + 'px';
+        gameTooltipEl.style.top  = top  + 'px';
+      }
+    });
+    unitStatus.addEventListener('mouseleave', hideTooltip);
 
     createGame();
   </script>
